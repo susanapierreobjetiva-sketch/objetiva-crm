@@ -69,6 +69,12 @@ export const api = {
   updatePolicy:        (id, data)      => request("PUT",    `/policies/${id}`, data),
   deletePolicy:        (id)            => request("DELETE", `/policies/${id}`),
 
+  // Tesis histórico
+  addTesisPolicy:   (clientId, data) => request("POST",   `/clients/${clientId}/tesis-policy`, data),
+  deleteTesisPolicy:(clientId, id)   => request("DELETE", `/clients/${clientId}/tesis-policy/${id}`),
+  addTesisClaim:    (clientId, data) => request("POST",   `/clients/${clientId}/tesis-claim`, data),
+  deleteTesisClaim: (clientId, id)   => request("DELETE", `/clients/${clientId}/tesis-claim/${id}`),
+
   // Siniestros
   getClaimsByClient: (clientId)     => request("GET",    `/claims/client/${clientId}`),
   getAllClaims:       ()             => request("GET",    "/claims"),

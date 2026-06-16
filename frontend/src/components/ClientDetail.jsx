@@ -1,6 +1,16 @@
 import { useState } from "react";
 import { api } from "../api";
 
+const emptyTesisPolicy = {
+  ramo: "", aseguradora: "", num_poliza: "", prima_anual: 0,
+  fecha_efecto: "", fecha_vencimiento: "", estado: "Baja", notas: "",
+};
+
+const emptyTesisClaim = {
+  ramo: "", aseguradora: "", num_expediente: "", fecha_siniestro: "",
+  descripcion: "", resolucion: "", importe: 0, estado: "Cerrado",
+};
+
 const RAMOS = ["Hogar", "Auto", "Vida", "Salud", "Empresa", "Responsabilidad Civil", "Decesos", "Viaje", "Otros"];
 const ASEGURADORAS = ["Mapfre", "Allianz", "AXA", "Generali", "Zurich", "Mutua Madrileña", "Santalucía", "Caser", "Reale", "Helvetia", "Avant2", "Otras"];
 const STAGES = ["Nuevo", "En seguimiento", "Negociación", "Emitido", "Anulado"];
@@ -37,6 +47,10 @@ export default function ClientDetail({ client, policies, claims, onRefresh, curr
   const [editPolicyId, setEditPolicyId] = useState(null);
   const [editClaimId, setEditClaimId]   = useState(null);
   const [newNote, setNewNote]       = useState("");
+  const [showTesisPolicyForm, setShowTesisPolicyForm] = useState(false);
+  const [showTesisClaimForm, setShowTesisClaimForm]   = useState(false);
+  const [tesisPolicyForm, setTesisPolicyForm] = useState(emptyTesisPolicy);
+  const [tesisClaimForm, setTesisClaimForm]   = useState(emptyTesisClaim);
   const [saving, setSaving]         = useState(false);
   const [toast, setToast]           = useState("");
 
@@ -100,6 +114,42 @@ export default function ClientDetail({ client, policies, claims, onRefresh, curr
       setNewNote("");
       showToast("Nota añadida ✓");
     } catch (e) { showToast(e.message || "Error"); }
+  };
+
+  const handleSaveTesisPolicy = async () => {
+    if (!tesisPolicyForm.ramo) return showToast("El ramo es obligatorio");
+    setSaving(true);
+    try {
+      await api.addTesisPolicy(client.id, tesisPolicyForm);
+      await onRefresh();
+      setShowTesisPolicyForm(false);
+      setTesisPolicyForm(emptyTesisPolicy);
+      showToast("Póliza histórica añadida ✓");
+    } catch (e) { showToast(e.message || "Error"); }
+    setSaving(false);
+  };
+
+  const handleDeleteTesisPolicy = async (id) => {
+    try { await api.deleteTesisPolicy(client.id, id); await onRefresh(); showToast("Eliminada"); }
+    catch (e) { showToast(e.message || "Error"); }
+  };
+
+  const handleSaveTesisClaim = async () => {
+    if (!tesisClaimForm.descripcion) return showToast("La descripción es obligatoria");
+    setSaving(true);
+    try {
+      await api.addTesisClaim(client.id, tesisClaimForm);
+      await onRefresh();
+      setShowTesisClaimForm(false);
+      setTesisClaimForm(emptyTesisClaim);
+      showToast("Siniestro histórico añadido ✓");
+    } catch (e) { showToast(e.message || "Error"); }
+    setSaving(false);
+  };
+
+  const handleDeleteTesisClaim = async (id) => {
+    try { await api.deleteTesisClaim(client.id, id); await onRefresh(); showToast("Eliminado"); }
+    catch (e) { showToast(e.message || "Error"); }
   };
 
   const prima_total = policies.filter(p => p.estado_poliza === "Activa").reduce((s, p) => s + (p.prima_anual || 0), 0);
@@ -182,6 +232,7 @@ export default function ClientDetail({ client, policies, claims, onRefresh, curr
           { id: "polizas",   label: `Pólizas (${policies.length})` },
           { id: "siniestros",label: `Siniestros (${claims.length})` },
           { id: "historial", label: `Historial (${(client.activities || []).length})` },
+          { id: "tesis",     label: `Tesis (${(client.tesis_policies || []).length + (client.tesis_claims || []).length})` },
         ].map(t => (
           <button key={t.id} onClick={() => setTab(t.id)}
             style={{ ...S.chip, ...(tab === t.id ? S.chipActive : {}) }}>
@@ -309,6 +360,88 @@ export default function ClientDetail({ client, policies, claims, onRefresh, curr
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* TAB: Historial Tesis */}
+      {tab === "tesis" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+          <div style={{ background: "var(--lift)", border: "0.5px solid var(--goldDim)", borderRadius: 8, padding: "12px 16px", display: "flex", gap: 10, alignItems: "flex-start" }}>
+            <span style={{ fontSize: 16 }}>📋</span>
+            <div style={{ fontSize: 12, color: "var(--mute)", fontFamily: "Syne, sans-serif", lineHeight: 1.6 }}>
+              Registra aquí el historial previo de este cliente en Tesis. Estos datos son solo de referencia y no afectan al pipeline ni a las renovaciones activas.
+            </div>
+          </div>
+
+          <div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+              <div style={{ fontSize: 11, letterSpacing: "0.15em", color: "var(--gold)", textTransform: "uppercase", fontFamily: "Syne, sans-serif" }}>
+                Pólizas históricas ({(client.tesis_policies || []).length})
+              </div>
+              <button onClick={() => { setTesisPolicyForm(emptyTesisPolicy); setShowTesisPolicyForm(true); }} style={S.btn}>+ Añadir póliza</button>
+            </div>
+            {(client.tesis_policies || []).length === 0
+              ? <div style={S.empty}>Sin pólizas históricas registradas</div>
+              : (client.tesis_policies || []).map((p, i) => (
+                <div key={p.id || i} style={{ background: "var(--card)", border: "0.5px solid var(--border)", borderRadius: 8, padding: "12px 16px", marginBottom: 8 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 8 }}>
+                    <div>
+                      <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                        <span style={{ fontFamily: "Syne, sans-serif", fontSize: 13, fontWeight: 700, color: "var(--gold)", textTransform: "uppercase" }}>{p.ramo}</span>
+                        <span style={{ fontSize: 13, color: "var(--text)", fontFamily: "Syne, sans-serif" }}>{p.aseguradora}</span>
+                        {p.num_poliza && <span style={{ fontSize: 11, color: "var(--mute)", fontFamily: "Syne, sans-serif" }}>Nº {p.num_poliza}</span>}
+                      </div>
+                      <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginTop: 6 }}>
+                        {p.prima_anual > 0 && <span style={S.meta}>{p.prima_anual.toLocaleString("es-ES")} €/año</span>}
+                        {p.fecha_efecto && <span style={S.meta}>Efecto: {p.fecha_efecto}</span>}
+                        {p.fecha_vencimiento && <span style={S.meta}>Vencimiento: {p.fecha_vencimiento}</span>}
+                        {p.estado && <span style={{ ...S.meta, color: p.estado === "Activa" ? "#27ae60" : "var(--mute)" }}>{p.estado}</span>}
+                      </div>
+                      {p.notas && <div style={{ fontSize: 12, color: "var(--mute)", fontFamily: "Syne, sans-serif", marginTop: 6 }}>{p.notas}</div>}
+                    </div>
+                    <button onClick={() => handleDeleteTesisPolicy(p.id)} style={{ ...S.iconBtn, color: "#8B3A3A" }}>
+                      <Icon d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" size={14} />
+                    </button>
+                  </div>
+                </div>
+              ))
+            }
+          </div>
+
+          <div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+              <div style={{ fontSize: 11, letterSpacing: "0.15em", color: "var(--gold)", textTransform: "uppercase", fontFamily: "Syne, sans-serif" }}>
+                Siniestros históricos ({(client.tesis_claims || []).length})
+              </div>
+              <button onClick={() => { setTesisClaimForm(emptyTesisClaim); setShowTesisClaimForm(true); }} style={S.btn}>+ Añadir siniestro</button>
+            </div>
+            {(client.tesis_claims || []).length === 0
+              ? <div style={S.empty}>Sin siniestros históricos registrados</div>
+              : (client.tesis_claims || []).map((c, i) => (
+                <div key={c.id || i} style={{ background: "var(--card)", border: "0.5px solid var(--border)", borderRadius: 8, padding: "12px 16px", marginBottom: 8 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 8 }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontFamily: "Syne, sans-serif", fontSize: 13, fontWeight: 600, color: "var(--text)" }}>{c.descripcion}</div>
+                      <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginTop: 6 }}>
+                        {c.ramo && <span style={S.meta}>{c.ramo}</span>}
+                        {c.aseguradora && <span style={S.meta}>{c.aseguradora}</span>}
+                        {c.num_expediente && <span style={S.meta}>Exp: {c.num_expediente}</span>}
+                        {c.fecha_siniestro && <span style={S.meta}>{c.fecha_siniestro}</span>}
+                        {c.importe > 0 && <span style={{ ...S.meta, color: "var(--gold)" }}>Indemnización: {c.importe.toLocaleString("es-ES")} €</span>}
+                      </div>
+                      {c.resolucion && <div style={{ fontSize: 12, color: "var(--mute)", fontFamily: "Syne, sans-serif", marginTop: 6 }}>Resolución: {c.resolucion}</div>}
+                    </div>
+                    <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                      <span style={{ fontSize: 10, padding: "3px 10px", borderRadius: 999, background: "var(--lift)", color: "var(--mute)", fontFamily: "Syne, sans-serif" }}>{c.estado}</span>
+                      <button onClick={() => handleDeleteTesisClaim(c.id)} style={{ ...S.iconBtn, color: "#8B3A3A" }}>
+                        <Icon d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" size={14} />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))
+            }
+          </div>
         </div>
       )}
 
@@ -460,6 +593,130 @@ export default function ClientDetail({ client, policies, claims, onRefresh, curr
                 <button onClick={handleSaveClaim} disabled={saving}
                   style={{ ...S.btn, flex: 1, justifyContent: "center", opacity: saving ? 0.7 : 1 }}>
                   {saving ? "Guardando..." : editClaimId ? "Guardar cambios" : "Registrar siniestro"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Tesis Póliza */}
+      {showTesisPolicyForm && (
+        <div style={S.overlay} onClick={e => e.target === e.currentTarget && setShowTesisPolicyForm(false)}>
+          <div style={S.modal}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20, paddingBottom: 16, borderBottom: "0.5px solid var(--border)" }}>
+              <span style={{ fontSize: 18, fontWeight: 700, color: "var(--text)", fontFamily: "Syne, sans-serif" }}>Póliza histórica (Tesis)</span>
+              <button onClick={() => setShowTesisPolicyForm(false)} style={{ background: "none", border: "none", color: "var(--mute)", cursor: "pointer", fontSize: 18 }}>✕</button>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                <div>
+                  <label style={S.formLabel}>Ramo *</label>
+                  <select value={tesisPolicyForm.ramo} onChange={e => setTesisPolicyForm(d => ({...d, ramo: e.target.value}))} style={S.input}>
+                    <option value="">Seleccionar...</option>
+                    {RAMOS.map(r => <option key={r}>{r}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label style={S.formLabel}>Aseguradora</label>
+                  <select value={tesisPolicyForm.aseguradora} onChange={e => setTesisPolicyForm(d => ({...d, aseguradora: e.target.value}))} style={S.input}>
+                    <option value="">Seleccionar...</option>
+                    {ASEGURADORAS.map(a => <option key={a}>{a}</option>)}
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label style={S.formLabel}>Nº de póliza</label>
+                <input value={tesisPolicyForm.num_poliza} onChange={e => setTesisPolicyForm(d => ({...d, num_poliza: e.target.value}))} placeholder="Número de póliza" style={S.input} />
+              </div>
+              <div>
+                <label style={S.formLabel}>Prima anual (€)</label>
+                <input type="number" value={tesisPolicyForm.prima_anual} onChange={e => setTesisPolicyForm(d => ({...d, prima_anual: +e.target.value}))} style={S.input} />
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                <div>
+                  <label style={S.formLabel}>Fecha efecto</label>
+                  <input type="date" value={tesisPolicyForm.fecha_efecto} onChange={e => setTesisPolicyForm(d => ({...d, fecha_efecto: e.target.value}))} style={S.input} />
+                </div>
+                <div>
+                  <label style={S.formLabel}>Fecha vencimiento</label>
+                  <input type="date" value={tesisPolicyForm.fecha_vencimiento} onChange={e => setTesisPolicyForm(d => ({...d, fecha_vencimiento: e.target.value}))} style={S.input} />
+                </div>
+              </div>
+              <div>
+                <label style={S.formLabel}>Estado</label>
+                <select value={tesisPolicyForm.estado} onChange={e => setTesisPolicyForm(d => ({...d, estado: e.target.value}))} style={S.input}>
+                  <option>Activa</option>
+                  <option>Baja</option>
+                  <option>Anulada</option>
+                </select>
+              </div>
+              <div>
+                <label style={S.formLabel}>Notas</label>
+                <textarea value={tesisPolicyForm.notas} onChange={e => setTesisPolicyForm(d => ({...d, notas: e.target.value}))} rows={2} style={{ ...S.input, resize: "vertical" }} />
+              </div>
+              <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
+                <button onClick={() => setShowTesisPolicyForm(false)} style={S.btnOutline}>Cancelar</button>
+                <button onClick={handleSaveTesisPolicy} disabled={saving} style={{ ...S.btn, flex: 1, justifyContent: "center", opacity: saving ? 0.7 : 1 }}>
+                  {saving ? "Guardando..." : "Añadir póliza histórica"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Tesis Siniestro */}
+      {showTesisClaimForm && (
+        <div style={S.overlay} onClick={e => e.target === e.currentTarget && setShowTesisClaimForm(false)}>
+          <div style={S.modal}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20, paddingBottom: 16, borderBottom: "0.5px solid var(--border)" }}>
+              <span style={{ fontSize: 18, fontWeight: 700, color: "var(--text)", fontFamily: "Syne, sans-serif" }}>Siniestro histórico (Tesis)</span>
+              <button onClick={() => setShowTesisClaimForm(false)} style={{ background: "none", border: "none", color: "var(--mute)", cursor: "pointer", fontSize: 18 }}>✕</button>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                <div>
+                  <label style={S.formLabel}>Ramo</label>
+                  <select value={tesisClaimForm.ramo} onChange={e => setTesisClaimForm(d => ({...d, ramo: e.target.value}))} style={S.input}>
+                    <option value="">Seleccionar...</option>
+                    {RAMOS.map(r => <option key={r}>{r}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label style={S.formLabel}>Aseguradora</label>
+                  <select value={tesisClaimForm.aseguradora} onChange={e => setTesisClaimForm(d => ({...d, aseguradora: e.target.value}))} style={S.input}>
+                    <option value="">Seleccionar...</option>
+                    {ASEGURADORAS.map(a => <option key={a}>{a}</option>)}
+                  </select>
+                </div>
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                <div>
+                  <label style={S.formLabel}>Nº expediente</label>
+                  <input value={tesisClaimForm.num_expediente} onChange={e => setTesisClaimForm(d => ({...d, num_expediente: e.target.value}))} placeholder="Nº expediente Tesis" style={S.input} />
+                </div>
+                <div>
+                  <label style={S.formLabel}>Fecha siniestro</label>
+                  <input type="date" value={tesisClaimForm.fecha_siniestro} onChange={e => setTesisClaimForm(d => ({...d, fecha_siniestro: e.target.value}))} style={S.input} />
+                </div>
+              </div>
+              <div>
+                <label style={S.formLabel}>Descripción *</label>
+                <textarea value={tesisClaimForm.descripcion} onChange={e => setTesisClaimForm(d => ({...d, descripcion: e.target.value}))} rows={3} placeholder="Describe el siniestro..." style={{ ...S.input, resize: "vertical" }} />
+              </div>
+              <div>
+                <label style={S.formLabel}>Resolución</label>
+                <input value={tesisClaimForm.resolucion} onChange={e => setTesisClaimForm(d => ({...d, resolucion: e.target.value}))} placeholder="Resolución del siniestro" style={S.input} />
+              </div>
+              <div>
+                <label style={S.formLabel}>Importe indemnización (€)</label>
+                <input type="number" value={tesisClaimForm.importe} onChange={e => setTesisClaimForm(d => ({...d, importe: +e.target.value}))} style={S.input} />
+              </div>
+              <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
+                <button onClick={() => setShowTesisClaimForm(false)} style={S.btnOutline}>Cancelar</button>
+                <button onClick={handleSaveTesisClaim} disabled={saving} style={{ ...S.btn, flex: 1, justifyContent: "center", opacity: saving ? 0.7 : 1 }}>
+                  {saving ? "Guardando..." : "Añadir siniestro histórico"}
                 </button>
               </div>
             </div>

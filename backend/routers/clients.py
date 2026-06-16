@@ -21,6 +21,8 @@ def format_client(d):
         "assigned_to": d.get("assigned_to", ""),
         "assigned_to_id": d.get("assigned_to_id", ""),
         "activities": d.get("activities", []),
+        "tesis_policies": d.get("tesis_policies", []),
+        "tesis_claims": d.get("tesis_claims", []),
         "created_at": d.get("created_at", ""),
         "updated_at": d.get("updated_at", ""),
     }
@@ -105,3 +107,45 @@ async def delete_activity(client_id: str, activity_id: str, request: Request, cu
         {"$pull": {"activities": {"id": activity_id}}}
     )
     return {"message": "Actividad eliminada"}
+
+# ── Tesis histórico ────────────────────────────────────────────
+
+@router.post("/{client_id}/tesis-policy")
+async def add_tesis_policy(client_id: str, request: Request, current_user=Depends(get_current_user)):
+    db   = request.app.db
+    data = await request.json()
+    data["id"] = str(ObjectId())
+    await db["clients"].update_one(
+        {"_id": ObjectId(client_id)},
+        {"$push": {"tesis_policies": data}, "$set": {"updated_at": datetime.now(timezone.utc).isoformat()}}
+    )
+    return data
+
+@router.delete("/{client_id}/tesis-policy/{policy_id}")
+async def delete_tesis_policy(client_id: str, policy_id: str, request: Request, current_user=Depends(get_current_user)):
+    db = request.app.db
+    await db["clients"].update_one(
+        {"_id": ObjectId(client_id)},
+        {"$pull": {"tesis_policies": {"id": policy_id}}}
+    )
+    return {"message": "OK"}
+
+@router.post("/{client_id}/tesis-claim")
+async def add_tesis_claim(client_id: str, request: Request, current_user=Depends(get_current_user)):
+    db   = request.app.db
+    data = await request.json()
+    data["id"] = str(ObjectId())
+    await db["clients"].update_one(
+        {"_id": ObjectId(client_id)},
+        {"$push": {"tesis_claims": data}, "$set": {"updated_at": datetime.now(timezone.utc).isoformat()}}
+    )
+    return data
+
+@router.delete("/{client_id}/tesis-claim/{claim_id}")
+async def delete_tesis_claim(client_id: str, claim_id: str, request: Request, current_user=Depends(get_current_user)):
+    db = request.app.db
+    await db["clients"].update_one(
+        {"_id": ObjectId(client_id)},
+        {"$pull": {"tesis_claims": {"id": claim_id}}}
+    )
+    return {"message": "OK"}
