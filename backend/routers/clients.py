@@ -10,18 +10,16 @@ def format_client(d):
     return {
         "id": str(d["_id"]),
         "name": d.get("name", ""),
-        "company": d.get("company", ""),
+        "dni": d.get("dni", ""),
         "email": d.get("email", ""),
         "phone": d.get("phone", ""),
         "address": d.get("address", ""),
-        "stage": d.get("stage", "Nuevo"),
+        "birth_date": d.get("birth_date", ""),
+        "tipo": d.get("tipo", "Particular"),
+        "empresa": d.get("empresa", ""),
+        "notas": d.get("notas", ""),
         "assigned_to": d.get("assigned_to", ""),
         "assigned_to_id": d.get("assigned_to_id", ""),
-        "contacts": d.get("contacts", []),
-        "notes": d.get("notes", ""),
-        "value": d.get("value", 0),
-        "alert_date": d.get("alert_date", None),
-        "tags": d.get("tags", []),
         "activities": d.get("activities", []),
         "created_at": d.get("created_at", ""),
         "updated_at": d.get("updated_at", ""),
@@ -31,9 +29,9 @@ def format_client(d):
 async def get_clients(request: Request, current_user=Depends(get_current_user)):
     db = request.app.db
     if current_user["role"] == "admin":
-        docs = await db["clients"].find().sort("created_at", -1).to_list(500)
+        docs = await db["clients"].find().sort("name", 1).to_list(1000)
     else:
-        docs = await db["clients"].find({"assigned_to_id": str(current_user["_id"])}).sort("created_at", -1).to_list(500)
+        docs = await db["clients"].find({"assigned_to_id": str(current_user["_id"])}).sort("name", 1).to_list(1000)
     return [format_client(d) for d in docs]
 
 @router.post("")
@@ -50,6 +48,14 @@ async def create_client(request: Request, body: ClientCreate, current_user=Depen
     result = await db["clients"].insert_one(doc)
     created = await db["clients"].find_one({"_id": result.inserted_id})
     return format_client(created)
+
+@router.get("/{client_id}")
+async def get_client(client_id: str, request: Request, current_user=Depends(get_current_user)):
+    db = request.app.db
+    client = await db["clients"].find_one({"_id": ObjectId(client_id)})
+    if not client:
+        raise HTTPException(404, "Cliente no encontrado")
+    return format_client(client)
 
 @router.put("/{client_id}")
 async def update_client(client_id: str, request: Request, body: ClientUpdate, current_user=Depends(get_current_user)):
@@ -68,13 +74,12 @@ async def update_client(client_id: str, request: Request, body: ClientUpdate, cu
 @router.delete("/{client_id}")
 async def delete_client(client_id: str, request: Request, current_user=Depends(get_current_user)):
     db = request.app.db
-    client = await db["clients"].find_one({"_id": ObjectId(client_id)})
-    if not client:
-        raise HTTPException(404, "Cliente no encontrado")
-    if current_user["role"] != "admin" and client.get("assigned_to_id") != str(current_user["_id"]):
-        raise HTTPException(403, "Sin permiso")
+    if current_user["role"] != "admin":
+        raise HTTPException(403, "Solo el admin puede eliminar clientes")
     await db["clients"].delete_one({"_id": ObjectId(client_id)})
-    return {"message": "Eliminado"}
+    await db["policies"].delete_many({"client_id": client_id})
+    await db["claims"].delete_many({"client_id": client_id})
+    return {"message": "Cliente y sus datos eliminados"}
 
 @router.post("/{client_id}/activity")
 async def add_activity(client_id: str, request: Request, current_user=Depends(get_current_user)):

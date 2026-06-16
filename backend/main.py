@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 from dotenv import load_dotenv
-from routers import auth, clients
+from routers import auth, clients, policies, claims
 import os
 
 load_dotenv()
@@ -27,8 +27,10 @@ async def startup():
 async def shutdown():
     app.mongodb_client.close()
 
-app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
-app.include_router(clients.router, prefix="/api/clients", tags=["clients"])
+app.include_router(auth.router,     prefix="/api/auth",     tags=["auth"])
+app.include_router(clients.router,  prefix="/api/clients",  tags=["clients"])
+app.include_router(policies.router, prefix="/api/policies", tags=["policies"])
+app.include_router(claims.router,   prefix="/api/claims",   tags=["claims"])
 
 @app.get("/")
 async def root():
