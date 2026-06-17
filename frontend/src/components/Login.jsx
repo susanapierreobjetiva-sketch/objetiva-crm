@@ -8,6 +8,9 @@ export default function Login({ onLogin }) {
   const [loading, setLoading]   = useState(false);
   const [showPwd, setShowPwd]   = useState(false);
   const [theme, setTheme]       = useState("dark");
+  const [step, setStep]         = useState("login"); // login | 2fa
+  const [tempToken, setTempToken] = useState("");
+  const [twoFaCode, setTwoFaCode] = useState("");
 
   const D = {
     bgLeft:   theme === "dark" ? "#0A0804"  : "#F5F0E8",
@@ -36,6 +39,12 @@ export default function Login({ onLogin }) {
     setLoading(true); setError("");
     try {
       const data = await api.login(email, password);
+      if (data.requires_2fa) {
+        setTempToken(data.temp_token);
+        setStep("2fa");
+        setLoading(false);
+        return;
+      }
       onLogin(data.user);
     } catch (e) {
       setError(e.message || "Credenciales incorrectas");
@@ -44,6 +53,82 @@ export default function Login({ onLogin }) {
   };
 
   const isMobile = window.innerWidth <= 768;
+
+  const handle2fa = async () => {
+    if (!twoFaCode) return setError("Introduce el código");
+    setLoading(true); setError("");
+    try {
+      const data = await api.validate2fa(tempToken, twoFaCode);
+      onLogin(data.user);
+    } catch (e) {
+      setError(e.message || "Código incorrecto");
+    }
+    setLoading(false);
+  };
+
+  if (step === "2fa") return (
+    <div style={{
+      minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center",
+      background: D.bgLeft, fontFamily: "Plus Jakarta Sans, sans-serif",
+    }}>
+      <div style={{
+        width: "100%", maxWidth: 400, padding: "2.5rem",
+        background: D.bgRight, border: `0.5px solid ${D.divider}`,
+        borderRadius: 12, boxShadow: "0 8px 40px rgba(0,0,0,0.6)",
+      }}>
+        <div style={{ textAlign: "center", marginBottom: 32 }}>
+          <svg viewBox="0 0 120 120" width="72" height="72" xmlns="http://www.w3.org/2000/svg" style={{ marginBottom: 16 }}>
+            <rect width="120" height="120" rx="20" fill="#1A1208"/>
+            <circle cx="60" cy="60" r="46" fill="none" stroke="#C9A870" strokeWidth="2.5"/>
+            <text x="60" y="56" textAnchor="middle" fontFamily="Georgia,serif" fontSize="22" fill="#C9A870" letterSpacing="1">OBJ</text>
+            <line x1="30" y1="63" x2="90" y2="63" stroke="#C9A870" strokeWidth="0.8" opacity="0.6"/>
+            <text x="60" y="76" textAnchor="middle" fontFamily="Arial,sans-serif" fontSize="9" fill="#C9A870" letterSpacing="5" opacity="0.8">CRM</text>
+          </svg>
+          <div style={{ fontSize: 20, fontWeight: 700, color: D.welcome, marginBottom: 6 }}>Verificación en dos pasos</div>
+          <div style={{ fontSize: 13, color: D.welcsub }}>Introduce el código de Google Authenticator</div>
+        </div>
+
+        {error && (
+          <div style={{ background: "#3A1A1A", border: "0.5px solid #8B3A3A", color: "#E08080",
+            padding: "10px 14px", borderRadius: 6, fontSize: 13, marginBottom: 20, textAlign: "center" }}>
+            {error}
+          </div>
+        )}
+
+        <div style={{ marginBottom: 24 }}>
+          <label style={{ display: "block", fontSize: 10, letterSpacing: "0.2em", color: D.label,
+            textTransform: "uppercase", marginBottom: 8 }}>Código 6 dígitos</label>
+          <input
+            value={twoFaCode}
+            onChange={e => setTwoFaCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+            onKeyDown={e => e.key === "Enter" && handle2fa()}
+            placeholder="000000"
+            maxLength={6}
+            style={{ width: "100%", background: D.inputBg, border: `0.5px solid ${D.inputBdr}`,
+              color: D.inputClr, padding: "16px", borderRadius: 6, textAlign: "center",
+              fontFamily: "Plus Jakarta Sans, sans-serif", fontSize: 28, letterSpacing: "0.4em",
+              outline: "none", boxSizing: "border-box" }}
+          />
+        </div>
+
+        <button onClick={handle2fa} disabled={loading}
+          style={{ width: "100%", padding: "14px", background: "#C9A870", color: "#0A0804",
+            border: "none", borderRadius: 6, fontFamily: "Plus Jakarta Sans, sans-serif",
+            fontSize: 11, fontWeight: 700, letterSpacing: "0.2em", textTransform: "uppercase",
+            cursor: loading ? "not-allowed" : "pointer", opacity: loading ? 0.7 : 1, marginBottom: 16 }}>
+          {loading ? "Verificando..." : "Verificar"}
+        </button>
+
+        <button onClick={() => { setStep("login"); setError(""); setTwoFaCode(""); }}
+          style={{ width: "100%", padding: "10px", background: "none", color: D.welcsub,
+            border: `0.5px solid ${D.divider}`, borderRadius: 6,
+            fontFamily: "Plus Jakarta Sans, sans-serif", fontSize: 11, cursor: "pointer",
+            letterSpacing: "0.1em", textTransform: "uppercase" }}>
+          ← Volver al login
+        </button>
+      </div>
+    </div>
+  );
 
   return (
     <div style={{

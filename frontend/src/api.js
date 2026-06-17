@@ -46,10 +46,28 @@ export const api = {
   }).then(async r => {
     if (!r.ok) { const e = await r.json(); throw new Error(e.detail); }
     const data = await r.json();
+    if (data.requires_2fa) return data; // pantalla 2FA
     token = data.access_token;
     localStorage.setItem("crm_token", token);
     return data;
   }),
+  validate2fa: (temp_token, code) => fetch(`${BASE}/auth/2fa/validate`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ temp_token, code }),
+  }).then(async r => {
+    if (!r.ok) { const e = await r.json(); throw new Error(e.detail); }
+    const data = await r.json();
+    token = data.access_token;
+    localStorage.setItem("crm_token", token);
+    return data;
+  }),
+  setup2fa:       ()                    => request("POST", "/auth/2fa/setup"),
+  verifySetup2fa: (code)                => request("POST", "/auth/2fa/verify-setup", { code }),
+  disable2fa:     (code)                => request("POST", "/auth/2fa/disable", { code }),
+  updateProfile:  (data)                => request("PUT",  "/auth/profile", data),
+  changePassword: (data)                => request("POST", "/auth/change-password", data),
   logout: () => fetch(`${BASE}/auth/logout`, { method: "POST", credentials: "include" })
     .then(() => { localStorage.removeItem("crm_token"); token = null; }),
 

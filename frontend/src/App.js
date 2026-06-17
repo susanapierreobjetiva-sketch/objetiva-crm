@@ -10,6 +10,7 @@ import Pipeline from "./components/Pipeline";
 import Activities from "./components/Activities";
 import Claims from "./components/Claims";
 import Reports from "./components/Reports";
+import Profile from "./components/Profile";
 
 if (!document.getElementById("crm-fonts")) {
   const l = document.createElement("link");
@@ -162,6 +163,14 @@ export default function App() {
         )}
         {view === "reports" && (
           <Reports clients={clients} policies={policies} claims={claims} />
+        )}
+        {view === "profile" && (
+          <Profile
+            currentUser={currentUser}
+            theme={theme}
+            onToggleTheme={() => setTheme(t => t === "dark" ? "light" : "dark")}
+            onUpdate={setCurrentUser}
+          />
         )}
       </main>
     </div>

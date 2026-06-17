@@ -29,6 +29,7 @@ const Icon = ({ d, size = 16 }) => (
 const emptyPolicy = {
   ramo: "Hogar", aseguradora: "", num_poliza: "",
   prima_anual: 0, fecha_efecto: "", fecha_renovacion: "",
+  periodicidad: "Anual",
   estado_tramite: "Nuevo", estado_poliza: "Activa", notas: "",
 };
 
@@ -262,6 +263,7 @@ export default function ClientDetail({ client, policies, claims, onRefresh, curr
                   </div>
                   <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginTop: 6 }}>
                     {p.prima_anual > 0 && <span style={S.meta}>{p.prima_anual.toLocaleString("es-ES")} €/año</span>}
+                    {p.periodicidad && p.periodicidad !== "Anual" && <span style={S.meta}>{p.periodicidad}</span>}
                     {p.fecha_efecto && <span style={S.meta}>Efecto: {p.fecha_efecto}</span>}
                     {p.fecha_renovacion && (
                       <span style={{ ...S.meta, color: p.fecha_renovacion <= today ? "#E08080" : "var(--mute)" }}>
@@ -493,6 +495,15 @@ export default function ClientDetail({ client, policies, claims, onRefresh, curr
                 </div>
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                <div>
+                  <label style={S.formLabel}>Periodicidad</label>
+                  <select value={policyForm.periodicidad || "Anual"} onChange={e => setP("periodicidad", e.target.value)} style={S.input}>
+                    <option>Anual</option>
+                    <option>Semestral</option>
+                    <option>Trimestral</option>
+                    <option>Mensual</option>
+                  </select>
+                </div>
                 <div>
                   <label style={S.formLabel}>Estado trámite</label>
                   <select value={policyForm.estado_tramite} onChange={e => setP("estado_tramite", e.target.value)} style={S.input}>

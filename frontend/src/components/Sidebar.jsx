@@ -54,9 +54,10 @@ export default function Sidebar({ currentUser, view, setView, onLogout, theme, o
       </div>
 
       {/* User pill */}
-      <div style={{ display: "flex", alignItems: "center", gap: 10,
+      <div onClick={() => setView("profile")}
+        style={{ display: "flex", alignItems: "center", gap: 10,
         margin: "12px 10px", padding: "10px 12px",
-        background: T.card, borderRadius: 8,
+        background: T.card, borderRadius: 8, cursor: "pointer",
         border: `0.5px solid ${T.border}`, borderLeft: `3px solid ${T.gold}` }}>
         <div style={{ width: 28, height: 28, borderRadius: "50%", background: T.lift,
           display: "flex", alignItems: "center", justifyContent: "center",

@@ -8,7 +8,7 @@ export default function Activities({ policies, clients, onRefresh }) {
 
   const vencidas = policies.filter(p =>
     p.fecha_renovacion && p.fecha_renovacion <= today &&
-    p.estado_tramite !== "Emitido" && p.estado_tramite !== "Anulado"
+    p.estado_tramite !== "Anulado"
   ).sort((a, b) => a.fecha_renovacion.localeCompare(b.fecha_renovacion));
 
   const proximas30 = policies.filter(p => {
@@ -21,6 +21,12 @@ export default function Activities({ policies, clients, onRefresh }) {
     if (!p.fecha_renovacion || p.estado_tramite === "Anulado") return false;
     const diff = Math.ceil((new Date(p.fecha_renovacion) - new Date(today)) / (1000 * 60 * 60 * 24));
     return diff > 30 && diff <= 90;
+  }).sort((a, b) => a.fecha_renovacion.localeCompare(b.fecha_renovacion));
+
+  const proximas365 = policies.filter(p => {
+    if (!p.fecha_renovacion || p.estado_tramite === "Anulado") return false;
+    const diff = Math.ceil((new Date(p.fecha_renovacion) - new Date(today)) / (1000 * 60 * 60 * 24));
+    return diff > 90 && diff <= 365;
   }).sort((a, b) => a.fecha_renovacion.localeCompare(b.fecha_renovacion));
 
   const diasRestantes = (fecha) => Math.ceil((new Date(fecha) - new Date(today)) / (1000 * 60 * 60 * 24));
@@ -79,6 +85,7 @@ export default function Activities({ policies, clients, onRefresh }) {
           { id: "vencidas",  label: `Vencidas (${vencidas.length})` },
           { id: "30dias",    label: `Próximos 30 días (${proximas30.length})` },
           { id: "90dias",    label: `Próximos 90 días (${proximas90.length})` },
+          { id: "365dias",   label: `Próximo año (${proximas365.length})` },
         ].map(t => (
           <button key={t.id} onClick={() => setFilter(t.id)}
             style={{ ...S.chip, ...(filter === t.id ? S.chipActive : {}) }}>
@@ -110,6 +117,15 @@ export default function Activities({ policies, clients, onRefresh }) {
           {proximas90.length === 0
             ? <div style={S.empty}>Sin renovaciones en los próximos 90 días</div>
             : proximas90.map(p => <PolicyCard key={p.id} p={p} urgente={false} />)
+          }
+        </div>
+      )}
+
+      {filter === "365dias" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          {proximas365.length === 0
+            ? <div style={S.empty}>Sin renovaciones en el próximo año</div>
+            : proximas365.map(p => <PolicyCard key={p.id} p={p} urgente={false} />)
           }
         </div>
       )}
