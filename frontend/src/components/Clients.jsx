@@ -144,7 +144,7 @@ export default function Clients({ clients, onRefresh, currentUser, focusId, setF
       <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
         {filtered.length === 0 && (
           <div style={{ textAlign: "center", padding: "3rem", color: "var(--mute)",
-            fontSize: 13, fontFamily: "Syne, sans-serif" }}>Sin trámites</div>
+            fontSize: 13, fontFamily: "Plus Jakarta Sans, sans-serif" }}>Sin trámites</div>
         )}
         {filtered.map(c => (
           <div key={c.id} style={{ background: "var(--card)", border: "0.5px solid var(--border)",
@@ -152,12 +152,12 @@ export default function Clients({ clients, onRefresh, currentUser, focusId, setF
             <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "13px 16px",
               cursor: "pointer" }} onClick={() => setOpenId(openId === c.id ? null : c.id)}>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontFamily: "Syne, sans-serif", fontSize: 13, fontWeight: 600,
+                <div style={{ fontFamily: "Plus Jakarta Sans, sans-serif", fontSize: 13, fontWeight: 600,
                   color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                   {c.name}
                 </div>
                 <div style={{ fontSize: 11, color: "var(--textSub)", marginTop: 2,
-                  fontFamily: "Syne, sans-serif", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  fontFamily: "Plus Jakarta Sans, sans-serif", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                   {[c.ramo, c.aseguradora, c.num_poliza].filter(Boolean).join(" · ")}
                 </div>
               </div>
@@ -165,12 +165,12 @@ export default function Clients({ clients, onRefresh, currentUser, focusId, setF
                 <span title="Renovación vencida" style={{ fontSize: 14 }}>⚠️</span>
               )}
               {c.prima_anual > 0 && (
-                <span style={{ fontSize: 11, color: "var(--gold)", fontFamily: "Syne, sans-serif",
+                <span style={{ fontSize: 11, color: "var(--gold)", fontFamily: "Plus Jakarta Sans, sans-serif",
                   whiteSpace: "nowrap" }}>{c.prima_anual.toLocaleString("es-ES")} €/año</span>
               )}
               <span style={{ fontSize: 10, padding: "3px 10px", borderRadius: 999,
                 background: "var(--lift)", color: STAGE_COLORS[c.stage] || "var(--mute)",
-                fontFamily: "Syne, sans-serif", letterSpacing: "0.08em", whiteSpace: "nowrap" }}>
+                fontFamily: "Plus Jakarta Sans, sans-serif", letterSpacing: "0.08em", whiteSpace: "nowrap" }}>
                 {c.stage}
               </span>
               <span style={{ fontSize: 10, color: "var(--mute)" }}>{openId === c.id ? "▲" : "▼"}</span>
@@ -211,18 +211,18 @@ export default function Clients({ clients, onRefresh, currentUser, focusId, setF
                 {/* Historial gestiones */}
                 <div style={{ marginTop: 16 }}>
                   <div style={{ fontSize: 10, letterSpacing: "0.15em", color: "var(--mute)",
-                    textTransform: "uppercase", fontFamily: "Syne, sans-serif", marginBottom: 10 }}>
+                    textTransform: "uppercase", fontFamily: "Plus Jakarta Sans, sans-serif", marginBottom: 10 }}>
                     Historial de gestiones
                   </div>
                   {(c.activities || []).length === 0 && (
-                    <div style={{ color: "var(--mute)", fontSize: 12, fontFamily: "Syne, sans-serif" }}>Sin gestiones registradas</div>
+                    <div style={{ color: "var(--mute)", fontSize: 12, fontFamily: "Plus Jakarta Sans, sans-serif" }}>Sin gestiones registradas</div>
                   )}
                   {(c.activities || []).slice().reverse().map(a => (
                     <div key={a.id} style={{ display: "flex", gap: 10, padding: "8px 0",
                       borderBottom: "0.5px solid var(--border)", alignItems: "flex-start" }}>
                       <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: 12, color: "var(--text)", fontFamily: "Syne, sans-serif" }}>{a.note}</div>
-                        <div style={{ fontSize: 10, color: "var(--mute)", marginTop: 3, fontFamily: "Syne, sans-serif" }}>
+                        <div style={{ fontSize: 12, color: "var(--text)", fontFamily: "Plus Jakarta Sans, sans-serif" }}>{a.note}</div>
+                        <div style={{ fontSize: 10, color: "var(--mute)", marginTop: 3, fontFamily: "Plus Jakarta Sans, sans-serif" }}>
                           {a.user} · {new Date(a.date).toLocaleDateString("es-ES")}
                         </div>
                       </div>
@@ -257,7 +257,7 @@ export default function Clients({ clients, onRefresh, currentUser, focusId, setF
           <div style={S.modal}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center",
               marginBottom: 20, paddingBottom: 16, borderBottom: "0.5px solid var(--border)" }}>
-              <span style={{ fontSize: 18, fontWeight: 700, color: "var(--text)", fontFamily: "Syne, sans-serif" }}>
+              <span style={{ fontSize: 18, fontWeight: 700, color: "var(--text)", fontFamily: "Plus Jakarta Sans, sans-serif" }}>
                 {editId ? "Editar trámite" : "Nuevo trámite"}
               </span>
               <button onClick={() => setShowForm(false)}
@@ -369,21 +369,21 @@ export default function Clients({ clients, onRefresh, currentUser, focusId, setF
 }
 
 const S = {
-  eyebrow:     { fontSize: 10, letterSpacing: "0.2em", color: "var(--gold)", textTransform: "uppercase", marginBottom: 8, fontFamily: "Syne, sans-serif" },
-  title:       { fontSize: 26, fontWeight: 700, color: "var(--text)", margin: 0, letterSpacing: "-0.5px", fontFamily: "Syne, sans-serif" },
-  sectionTitle:{ fontSize: 10, letterSpacing: "0.15em", color: "var(--gold)", textTransform: "uppercase", fontFamily: "Syne, sans-serif", fontWeight: 700 },
-  btn:         { display: "flex", alignItems: "center", gap: 6, padding: "9px 18px", background: "var(--gold)", color: "var(--bgApp)", border: "none", borderRadius: 6, cursor: "pointer", fontSize: 11, fontWeight: 700, fontFamily: "Syne, sans-serif", letterSpacing: "0.1em", textTransform: "uppercase" },
-  btnOutline:  { padding: "9px 18px", background: "none", color: "var(--gold)", border: "1px solid var(--goldDim)", borderRadius: 6, cursor: "pointer", fontSize: 11, fontFamily: "Syne, sans-serif", letterSpacing: "0.1em", textTransform: "uppercase" },
-  btnDanger:   { padding: "9px 18px", background: "none", color: "#8B3A3A", border: "1px solid #3A1A1A", borderRadius: 6, cursor: "pointer", fontSize: 11, fontFamily: "Syne, sans-serif", letterSpacing: "0.1em", textTransform: "uppercase" },
+  eyebrow:     { fontSize: 10, letterSpacing: "0.2em", color: "var(--gold)", textTransform: "uppercase", marginBottom: 8, fontFamily: "Plus Jakarta Sans, sans-serif" },
+  title:       { fontSize: 26, fontWeight: 700, color: "var(--text)", margin: 0, letterSpacing: "-0.5px", fontFamily: "Plus Jakarta Sans, sans-serif" },
+  sectionTitle:{ fontSize: 10, letterSpacing: "0.15em", color: "var(--gold)", textTransform: "uppercase", fontFamily: "Plus Jakarta Sans, sans-serif", fontWeight: 700 },
+  btn:         { display: "flex", alignItems: "center", gap: 6, padding: "9px 18px", background: "var(--gold)", color: "var(--bgApp)", border: "none", borderRadius: 6, cursor: "pointer", fontSize: 11, fontWeight: 700, fontFamily: "Plus Jakarta Sans, sans-serif", letterSpacing: "0.1em", textTransform: "uppercase" },
+  btnOutline:  { padding: "9px 18px", background: "none", color: "var(--gold)", border: "1px solid var(--goldDim)", borderRadius: 6, cursor: "pointer", fontSize: 11, fontFamily: "Plus Jakarta Sans, sans-serif", letterSpacing: "0.1em", textTransform: "uppercase" },
+  btnDanger:   { padding: "9px 18px", background: "none", color: "#8B3A3A", border: "1px solid #3A1A1A", borderRadius: 6, cursor: "pointer", fontSize: 11, fontFamily: "Plus Jakarta Sans, sans-serif", letterSpacing: "0.1em", textTransform: "uppercase" },
   searchWrap:  { display: "flex", alignItems: "center", gap: 10, background: "var(--card)", border: "0.5px solid var(--border)", borderRadius: 8, padding: "10px 16px" },
-  searchInput: { flex: 1, background: "none", border: "none", color: "var(--text)", fontFamily: "Syne, sans-serif", fontSize: 13, outline: "none" },
-  chip:        { padding: "5px 14px", borderRadius: 999, border: "0.5px solid var(--border)", background: "none", color: "var(--textSub)", cursor: "pointer", fontFamily: "Syne, sans-serif", fontSize: 9, fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase" },
+  searchInput: { flex: 1, background: "none", border: "none", color: "var(--text)", fontFamily: "Plus Jakarta Sans, sans-serif", fontSize: 13, outline: "none" },
+  chip:        { padding: "5px 14px", borderRadius: 999, border: "0.5px solid var(--border)", background: "none", color: "var(--textSub)", cursor: "pointer", fontFamily: "Plus Jakarta Sans, sans-serif", fontSize: 9, fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase" },
   chipActive:  { border: "0.5px solid var(--gold)", color: "var(--bgApp)", background: "var(--gold)", fontWeight: 700 },
-  input:       { width: "100%", background: "var(--lift)", border: "0.5px solid var(--border)", color: "var(--text)", padding: "10px 14px", borderRadius: 6, fontFamily: "Syne, sans-serif", fontSize: 13, outline: "none", boxSizing: "border-box" },
-  formLabel:   { display: "block", fontSize: 9, letterSpacing: "0.2em", color: "var(--mute)", textTransform: "uppercase", marginBottom: 6, fontFamily: "Syne, sans-serif" },
-  fieldLabel:  { fontSize: 9, letterSpacing: "0.15em", color: "var(--mute)", textTransform: "uppercase", fontFamily: "Syne, sans-serif", marginBottom: 4 },
-  fieldVal:    { fontSize: 13, color: "var(--textSub)", fontFamily: "Syne, sans-serif" },
+  input:       { width: "100%", background: "var(--lift)", border: "0.5px solid var(--border)", color: "var(--text)", padding: "10px 14px", borderRadius: 6, fontFamily: "Plus Jakarta Sans, sans-serif", fontSize: 13, outline: "none", boxSizing: "border-box" },
+  formLabel:   { display: "block", fontSize: 9, letterSpacing: "0.2em", color: "var(--mute)", textTransform: "uppercase", marginBottom: 6, fontFamily: "Plus Jakarta Sans, sans-serif" },
+  fieldLabel:  { fontSize: 9, letterSpacing: "0.15em", color: "var(--mute)", textTransform: "uppercase", fontFamily: "Plus Jakarta Sans, sans-serif", marginBottom: 4 },
+  fieldVal:    { fontSize: 13, color: "var(--textSub)", fontFamily: "Plus Jakarta Sans, sans-serif" },
   overlay:     { position: "fixed", inset: 0, background: "rgba(0,0,0,0.8)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100 },
   modal:       { background: "var(--card)", border: "0.5px solid var(--border)", borderRadius: 8, padding: 28, width: "min(520px, 95vw)", maxHeight: "90vh", overflow: "auto" },
-  toast:       { position: "fixed", bottom: 28, left: "50%", transform: "translateX(-50%)", background: "var(--card)", border: "1px solid var(--goldDim)", color: "var(--gold)", padding: "11px 22px", borderRadius: 6, fontSize: 12, fontFamily: "Syne, sans-serif", letterSpacing: 1.5, textTransform: "uppercase", zIndex: 200 },
+  toast:       { position: "fixed", bottom: 28, left: "50%", transform: "translateX(-50%)", background: "var(--card)", border: "1px solid var(--goldDim)", color: "var(--gold)", padding: "11px 22px", borderRadius: 6, fontSize: 12, fontFamily: "Plus Jakarta Sans, sans-serif", letterSpacing: 1.5, textTransform: "uppercase", zIndex: 200 },
 };

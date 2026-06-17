@@ -50,9 +50,9 @@ export default function Claims({ claims, clients, policies, onRefresh, currentUs
         ].map(k => (
           <div key={k.label} style={{ background: "var(--card)", border: "0.5px solid var(--border)",
             borderRadius: 8, padding: "14px 16px" }}>
-            <div style={{ fontSize: 9, letterSpacing: "0.15em", color: "var(--mute)",
-              textTransform: "uppercase", fontFamily: "Syne, sans-serif", marginBottom: 6 }}>{k.label}</div>
-            <div style={{ fontSize: 22, fontWeight: 700, color: k.color, fontFamily: "Syne, sans-serif" }}>{k.value}</div>
+            <div style={{ fontSize: 13, letterSpacing: "0.12em", color: "var(--mute)",
+              textTransform: "uppercase", fontFamily: "Plus Jakarta Sans, sans-serif", marginBottom: 6 }}>{k.label}</div>
+            <div style={{ fontSize: 28, fontWeight: 700, color: k.color, fontFamily: "Plus Jakarta Sans, sans-serif" }}>{k.value}</div>
           </div>
         ))}
       </div>
@@ -85,12 +85,12 @@ export default function Claims({ claims, clients, policies, onRefresh, currentUs
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 8 }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   {/* Cliente */}
-                  <div style={{ fontSize: 12, color: "var(--gold)", fontFamily: "Syne, sans-serif",
+                  <div style={{ fontSize: 14, color: "var(--gold)", fontFamily: "Plus Jakarta Sans, sans-serif",
                     fontWeight: 600, letterSpacing: "0.06em", marginBottom: 4 }}>
                     {client?.name || "Cliente desconocido"}
                   </div>
                   {/* Descripción */}
-                  <div style={{ fontSize: 15, color: "var(--text)", fontFamily: "Syne, sans-serif",
+                  <div style={{ fontSize: 16, color: "var(--text)", fontFamily: "Plus Jakarta Sans, sans-serif",
                     fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                     {c.descripcion}
                   </div>
@@ -102,14 +102,14 @@ export default function Claims({ claims, clients, policies, onRefresh, currentUs
                     {c.fecha_siniestro && <span style={S.meta}>{c.fecha_siniestro}</span>}
                   </div>
                   {c.resolucion && (
-                    <div style={{ fontSize: 12, color: "var(--mute)", fontFamily: "Syne, sans-serif", marginTop: 6 }}>
+                    <div style={{ fontSize: 12, color: "var(--mute)", fontFamily: "Plus Jakarta Sans, sans-serif", marginTop: 6 }}>
                       Resolución: {c.resolucion}
                     </div>
                   )}
                 </div>
-                <span style={{ fontSize: 10, padding: "4px 12px", borderRadius: 999,
+                <span style={{ fontSize: 12, padding: "4px 12px", borderRadius: 999,
                   background: estados.bg, color: estados.color,
-                  fontFamily: "Syne, sans-serif", letterSpacing: "0.08em",
+                  fontFamily: "Plus Jakarta Sans, sans-serif", letterSpacing: "0.08em",
                   whiteSpace: "nowrap", flexShrink: 0 }}>{c.estado}</span>
               </div>
             </div>
@@ -121,12 +121,12 @@ export default function Claims({ claims, clients, policies, onRefresh, currentUs
 }
 
 const S = {
-  eyebrow:    { fontSize: 10, letterSpacing: "0.2em", color: "var(--gold)", textTransform: "uppercase", marginBottom: 8, fontFamily: "Syne, sans-serif" },
-  title:      { fontSize: 32, fontWeight: 700, color: "var(--text)", margin: 0, letterSpacing: "-0.5px", fontFamily: "Syne, sans-serif" },
+  eyebrow:    { fontSize: 13, letterSpacing: "0.2em", color: "var(--gold)", textTransform: "uppercase", marginBottom: 8, fontFamily: "Plus Jakarta Sans, sans-serif" },
+  title:      { fontSize: 40, fontWeight: 700, color: "var(--text)", margin: 0, letterSpacing: "-0.5px", fontFamily: "Plus Jakarta Sans, sans-serif" },
   searchWrap: { display: "flex", alignItems: "center", gap: 10, background: "var(--card)", border: "0.5px solid var(--border)", borderRadius: 8, padding: "10px 16px" },
-  searchInput:{ flex: 1, background: "none", border: "none", color: "var(--text)", fontFamily: "Syne, sans-serif", fontSize: 13, outline: "none" },
-  chip:       { padding: "5px 14px", borderRadius: 999, border: "0.5px solid var(--border)", background: "none", color: "var(--textSub)", cursor: "pointer", fontFamily: "Syne, sans-serif", fontSize: 9, fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase" },
+  searchInput:{ flex: 1, background: "none", border: "none", color: "var(--text)", fontFamily: "Plus Jakarta Sans, sans-serif", fontSize: 13, outline: "none" },
+  chip:       { padding: "5px 14px", borderRadius: 999, border: "0.5px solid var(--border)", background: "none", color: "var(--textSub)", cursor: "pointer", fontFamily: "Plus Jakarta Sans, sans-serif", fontSize: 11, fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase" },
   chipActive: { border: "0.5px solid var(--gold)", color: "var(--bgApp)", background: "var(--gold)", fontWeight: 700 },
-  meta:       { fontSize: 12, color: "var(--mute)", fontFamily: "Syne, sans-serif" },
-  empty:      { textAlign: "center", color: "var(--mute)", fontSize: 13, fontFamily: "Syne, sans-serif", padding: "3rem", letterSpacing: "0.08em" },
+  meta:       { fontSize: 14, color: "var(--mute)", fontFamily: "Plus Jakarta Sans, sans-serif" },
+  empty:      { textAlign: "center", color: "var(--mute)", fontSize: 13, fontFamily: "Plus Jakarta Sans, sans-serif", padding: "3rem", letterSpacing: "0.08em" },
 };

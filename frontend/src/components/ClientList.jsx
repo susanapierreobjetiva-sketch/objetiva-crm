@@ -116,8 +116,8 @@ export default function ClientList({ clients, policies, onRefresh, currentUser, 
           <div key={k.label} style={{ background: "var(--card)", border: "0.5px solid var(--border)",
             borderRadius: 8, padding: "14px 16px" }}>
             <div style={{ fontSize: 9, letterSpacing: "0.15em", color: "var(--mute)",
-              textTransform: "uppercase", fontFamily: "Syne, sans-serif", marginBottom: 6 }}>{k.label}</div>
-            <div style={{ fontSize: 22, fontWeight: 700, color: "var(--gold)", fontFamily: "Syne, sans-serif" }}>{k.value}</div>
+              textTransform: "uppercase", fontFamily: "Plus Jakarta Sans, sans-serif", marginBottom: 6 }}>{k.label}</div>
+            <div style={{ fontSize: 28, fontWeight: 700, color: "var(--gold)", fontFamily: "Plus Jakarta Sans, sans-serif" }}>{k.value}</div>
           </div>
         ))}
       </div>
@@ -126,7 +126,7 @@ export default function ClientList({ clients, policies, onRefresh, currentUser, 
       <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
         {filtered.length === 0 && (
           <div style={{ textAlign: "center", padding: "3rem", color: "var(--mute)",
-            fontSize: 13, fontFamily: "Syne, sans-serif" }}>Sin clientes</div>
+            fontSize: 13, fontFamily: "Plus Jakarta Sans, sans-serif" }}>Sin clientes</div>
         )}
         {filtered.map(c => {
           const nPolizas = clientPolicyCount(c.id);
@@ -150,37 +150,37 @@ export default function ClientList({ clients, policies, onRefresh, currentUser, 
 
               {/* Info */}
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontFamily: "Syne, sans-serif", fontSize: 15, fontWeight: 600,
+                <div style={{ fontFamily: "Plus Jakarta Sans, sans-serif", fontSize: 16, fontWeight: 600,
                   color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                   {c.name}
-                  {c.empresa && <span style={{ fontSize: 12, color: "var(--mute)", marginLeft: 8 }}>· {c.empresa}</span>}
+                  {c.empresa && <span style={{ fontSize: 14, color: "var(--mute)", marginLeft: 8 }}>· {c.empresa}</span>}
                 </div>
-                <div style={{ fontSize: 12, color: "var(--textSub)", marginTop: 2,
-                  fontFamily: "Syne, sans-serif", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                <div style={{ fontSize: 14, color: "var(--textSub)", marginTop: 2,
+                  fontFamily: "Plus Jakarta Sans, sans-serif", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                   {[c.email, c.phone].filter(Boolean).join(" · ")}
                 </div>
               </div>
 
               {/* Pólizas */}
               <div style={{ textAlign: "center", flexShrink: 0 }}>
-                <div style={{ fontSize: 16, fontWeight: 700, color: "var(--gold)", fontFamily: "Syne, sans-serif" }}>{nPolizas}</div>
-                <div style={{ fontSize: 9, color: "var(--mute)", fontFamily: "Syne, sans-serif", letterSpacing: "0.08em", textTransform: "uppercase" }}>pólizas</div>
+                <div style={{ fontSize: 18, fontWeight: 700, color: "var(--gold)", fontFamily: "Plus Jakarta Sans, sans-serif" }}>{nPolizas}</div>
+                <div style={{ fontSize: 11, color: "var(--mute)", fontFamily: "Plus Jakarta Sans, sans-serif", letterSpacing: "0.08em", textTransform: "uppercase" }}>pólizas</div>
               </div>
 
               {/* Prima */}
               {prima > 0 && (
                 <div style={{ textAlign: "right", flexShrink: 0 }}>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: "var(--gold)", fontFamily: "Syne, sans-serif" }}>
+                  <div style={{ fontSize: 15, fontWeight: 600, color: "var(--gold)", fontFamily: "Plus Jakarta Sans, sans-serif" }}>
                     {prima.toLocaleString("es-ES")} €
                   </div>
-                  <div style={{ fontSize: 9, color: "var(--mute)", fontFamily: "Syne, sans-serif", letterSpacing: "0.08em", textTransform: "uppercase" }}>prima/año</div>
+                  <div style={{ fontSize: 11, color: "var(--mute)", fontFamily: "Plus Jakarta Sans, sans-serif", letterSpacing: "0.08em", textTransform: "uppercase" }}>prima/año</div>
                 </div>
               )}
 
               {/* Tipo */}
-              <span style={{ fontSize: 9, padding: "3px 10px", borderRadius: 999,
+              <span style={{ fontSize: 11, padding: "3px 10px", borderRadius: 999,
                 background: "var(--lift)", color: "var(--mute)",
-                fontFamily: "Syne, sans-serif", letterSpacing: "0.08em",
+                fontFamily: "Plus Jakarta Sans, sans-serif", letterSpacing: "0.08em",
                 textTransform: "uppercase", flexShrink: 0 }}>{c.tipo}</span>
 
               {/* Acciones */}
@@ -205,7 +205,7 @@ export default function ClientList({ clients, policies, onRefresh, currentUser, 
           <div style={S.modal}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center",
               marginBottom: 20, paddingBottom: 16, borderBottom: "0.5px solid var(--border)" }}>
-              <span style={{ fontSize: 18, fontWeight: 700, color: "var(--text)", fontFamily: "Syne, sans-serif" }}>
+              <span style={{ fontSize: 18, fontWeight: 700, color: "var(--text)", fontFamily: "Plus Jakarta Sans, sans-serif" }}>
                 {editId ? "Editar cliente" : "Nuevo cliente"}
               </span>
               <button onClick={() => setShowForm(false)}
@@ -282,18 +282,18 @@ export default function ClientList({ clients, policies, onRefresh, currentUser, 
 }
 
 const S = {
-  eyebrow:    { fontSize: 10, letterSpacing: "0.2em", color: "var(--gold)", textTransform: "uppercase", marginBottom: 8, fontFamily: "Syne, sans-serif" },
-  title:      { fontSize: 32, fontWeight: 700, color: "var(--text)", margin: 0, letterSpacing: "-0.5px", fontFamily: "Syne, sans-serif" },
-  btn:        { display: "flex", alignItems: "center", gap: 6, padding: "9px 18px", background: "var(--gold)", color: "var(--bgApp)", border: "none", borderRadius: 6, cursor: "pointer", fontSize: 11, fontWeight: 700, fontFamily: "Syne, sans-serif", letterSpacing: "0.1em", textTransform: "uppercase" },
-  btnOutline: { padding: "9px 18px", background: "none", color: "var(--gold)", border: "1px solid var(--goldDim)", borderRadius: 6, cursor: "pointer", fontSize: 11, fontFamily: "Syne, sans-serif", letterSpacing: "0.1em", textTransform: "uppercase" },
+  eyebrow:    { fontSize: 13, letterSpacing: "0.2em", color: "var(--gold)", textTransform: "uppercase", marginBottom: 8, fontFamily: "Plus Jakarta Sans, sans-serif" },
+  title:      { fontSize: 40, fontWeight: 700, color: "var(--text)", margin: 0, letterSpacing: "-0.5px", fontFamily: "Plus Jakarta Sans, sans-serif" },
+  btn:        { display: "flex", alignItems: "center", gap: 6, padding: "9px 18px", background: "var(--gold)", color: "var(--bgApp)", border: "none", borderRadius: 6, cursor: "pointer", fontSize: 11, fontWeight: 700, fontFamily: "Plus Jakarta Sans, sans-serif", letterSpacing: "0.1em", textTransform: "uppercase" },
+  btnOutline: { padding: "9px 18px", background: "none", color: "var(--gold)", border: "1px solid var(--goldDim)", borderRadius: 6, cursor: "pointer", fontSize: 11, fontFamily: "Plus Jakarta Sans, sans-serif", letterSpacing: "0.1em", textTransform: "uppercase" },
   iconBtn:    { background: "none", border: "none", color: "var(--mute)", cursor: "pointer", padding: 6, borderRadius: 4, display: "flex", alignItems: "center" },
   searchWrap: { display: "flex", alignItems: "center", gap: 10, background: "var(--card)", border: "0.5px solid var(--border)", borderRadius: 8, padding: "10px 16px" },
-  searchInput:{ flex: 1, background: "none", border: "none", color: "var(--text)", fontFamily: "Syne, sans-serif", fontSize: 13, outline: "none" },
-  chip:       { padding: "5px 14px", borderRadius: 999, border: "0.5px solid var(--border)", background: "none", color: "var(--textSub)", cursor: "pointer", fontFamily: "Syne, sans-serif", fontSize: 9, fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase" },
+  searchInput:{ flex: 1, background: "none", border: "none", color: "var(--text)", fontFamily: "Plus Jakarta Sans, sans-serif", fontSize: 13, outline: "none" },
+  chip:       { padding: "5px 14px", borderRadius: 999, border: "0.5px solid var(--border)", background: "none", color: "var(--textSub)", cursor: "pointer", fontFamily: "Plus Jakarta Sans, sans-serif", fontSize: 11, fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase" },
   chipActive: { border: "0.5px solid var(--gold)", color: "var(--bgApp)", background: "var(--gold)", fontWeight: 700 },
-  input:      { width: "100%", background: "var(--lift)", border: "0.5px solid var(--border)", color: "var(--text)", padding: "10px 14px", borderRadius: 6, fontFamily: "Syne, sans-serif", fontSize: 13, outline: "none", boxSizing: "border-box" },
-  formLabel:  { display: "block", fontSize: 9, letterSpacing: "0.2em", color: "var(--mute)", textTransform: "uppercase", marginBottom: 6, fontFamily: "Syne, sans-serif" },
+  input:      { width: "100%", background: "var(--lift)", border: "0.5px solid var(--border)", color: "var(--text)", padding: "10px 14px", borderRadius: 6, fontFamily: "Plus Jakarta Sans, sans-serif", fontSize: 13, outline: "none", boxSizing: "border-box" },
+  formLabel:  { display: "block", fontSize: 11, letterSpacing: "0.2em", color: "var(--mute)", textTransform: "uppercase", marginBottom: 6, fontFamily: "Plus Jakarta Sans, sans-serif" },
   overlay:    { position: "fixed", inset: 0, background: "rgba(0,0,0,0.8)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100 },
   modal:      { background: "var(--card)", border: "0.5px solid var(--border)", borderRadius: 8, padding: 28, width: "min(500px, 95vw)", maxHeight: "90vh", overflow: "auto" },
-  toast:      { position: "fixed", bottom: 28, left: "50%", transform: "translateX(-50%)", background: "var(--card)", border: "1px solid var(--goldDim)", color: "var(--gold)", padding: "11px 22px", borderRadius: 6, fontSize: 12, fontFamily: "Syne, sans-serif", letterSpacing: 1.5, textTransform: "uppercase", zIndex: 200 },
+  toast:      { position: "fixed", bottom: 28, left: "50%", transform: "translateX(-50%)", background: "var(--card)", border: "1px solid var(--goldDim)", color: "var(--gold)", padding: "11px 22px", borderRadius: 6, fontSize: 12, fontFamily: "Plus Jakarta Sans, sans-serif", letterSpacing: 1.5, textTransform: "uppercase", zIndex: 200 },
 };

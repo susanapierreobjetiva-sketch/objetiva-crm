@@ -208,7 +208,7 @@ export default function Reports({ clients, policies, claims }) {
 
       {/* Fecha y botones */}
       <div style={{ background: "var(--card)", border: "0.5px solid var(--border)", borderRadius: 8, padding: "20px 24px" }}>
-        <div style={{ fontFamily: "Syne, sans-serif", fontSize: 13, color: "var(--mute)", marginBottom: 6, textTransform: "capitalize" }}>
+        <div style={{ fontFamily: "Plus Jakarta Sans, sans-serif", fontSize: 13, color: "var(--mute)", marginBottom: 6, textTransform: "capitalize" }}>
           {todayFmt}
         </div>
         <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginTop: 16 }}>
@@ -231,15 +231,15 @@ export default function Reports({ clients, policies, claims }) {
           { label: "Siniestros en curso",     value: siniestrosAbiertos.length, color: "#C9A870" },
         ].map(k => (
           <div key={k.label} style={{ background: "var(--card)", border: "0.5px solid var(--border)", borderRadius: 8, padding: "16px 18px" }}>
-            <div style={{ fontSize: 10, letterSpacing: "0.15em", color: "var(--mute)", textTransform: "uppercase", fontFamily: "Syne, sans-serif", marginBottom: 8 }}>{k.label}</div>
-            <div style={{ fontSize: 28, fontWeight: 700, color: k.color, fontFamily: "Syne, sans-serif" }}>{k.value}</div>
+            <div style={{ fontSize: 13, letterSpacing: "0.12em", color: "var(--mute)", textTransform: "uppercase", fontFamily: "Plus Jakarta Sans, sans-serif", marginBottom: 8 }}>{k.label}</div>
+            <div style={{ fontSize: 28, fontWeight: 700, color: k.color, fontFamily: "Plus Jakarta Sans, sans-serif" }}>{k.value}</div>
           </div>
         ))}
       </div>
 
       {/* Preview gestiones */}
       <div style={{ background: "var(--card)", border: "0.5px solid var(--border)", borderRadius: 8, padding: 20 }}>
-        <div style={{ fontSize: 11, letterSpacing: "0.15em", color: "var(--mute)", textTransform: "uppercase", fontFamily: "Syne, sans-serif", marginBottom: 14 }}>
+        <div style={{ fontSize: 13, letterSpacing: "0.12em", color: "var(--mute)", textTransform: "uppercase", fontFamily: "Plus Jakarta Sans, sans-serif", marginBottom: 14 }}>
           Gestiones registradas hoy
         </div>
         {gestionesHoy.length === 0
@@ -249,10 +249,10 @@ export default function Reports({ clients, policies, claims }) {
               <div style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--gold)", flexShrink: 0, marginTop: 6 }} />
               <div style={{ flex: 1 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 4 }}>
-                  <span style={{ fontSize: 13, fontWeight: 600, color: "var(--gold)", fontFamily: "Syne, sans-serif" }}>{g.cliente}</span>
-                  <span style={{ fontSize: 11, color: "var(--mute)", fontFamily: "Syne, sans-serif" }}>{g.hora} · {g.usuario}</span>
+                  <span style={{ fontSize: 15, fontWeight: 600, color: "var(--gold)", fontFamily: "Plus Jakarta Sans, sans-serif" }}>{g.cliente}</span>
+                  <span style={{ fontSize: 13, color: "var(--mute)", fontFamily: "Plus Jakarta Sans, sans-serif" }}>{g.hora} · {g.usuario}</span>
                 </div>
-                <div style={{ fontSize: 13, color: "var(--text)", fontFamily: "Syne, sans-serif", marginTop: 4 }}>{g.gestion}</div>
+                <div style={{ fontSize: 15, color: "var(--text)", fontFamily: "Plus Jakarta Sans, sans-serif", marginTop: 4 }}>{g.gestion}</div>
               </div>
             </div>
           ))
@@ -261,7 +261,7 @@ export default function Reports({ clients, policies, claims }) {
 
       {/* Preview renovaciones */}
       <div style={{ background: "var(--card)", border: "0.5px solid var(--border)", borderRadius: 8, padding: 20 }}>
-        <div style={{ fontSize: 11, letterSpacing: "0.15em", color: "var(--mute)", textTransform: "uppercase", fontFamily: "Syne, sans-serif", marginBottom: 14 }}>
+        <div style={{ fontSize: 13, letterSpacing: "0.12em", color: "var(--mute)", textTransform: "uppercase", fontFamily: "Plus Jakarta Sans, sans-serif", marginBottom: 14 }}>
           Renovaciones pendientes
         </div>
         {renovacionesHoy.length === 0
@@ -270,14 +270,14 @@ export default function Reports({ clients, policies, claims }) {
             <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center",
               padding: "10px 0", borderBottom: "0.5px solid var(--border)", flexWrap: "wrap", gap: 8 }}>
               <div>
-                <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text)", fontFamily: "Syne, sans-serif" }}>{r.cliente}</div>
-                <div style={{ fontSize: 12, color: "var(--mute)", fontFamily: "Syne, sans-serif", marginTop: 2 }}>
+                <div style={{ fontSize: 15, fontWeight: 600, color: "var(--text)", fontFamily: "Plus Jakarta Sans, sans-serif" }}>{r.cliente}</div>
+                <div style={{ fontSize: 14, color: "var(--mute)", fontFamily: "Plus Jakarta Sans, sans-serif", marginTop: 2 }}>
                   {r.ramo} · {r.aseguradora} · {r.poliza}
                 </div>
               </div>
               <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                <span style={{ fontSize: 12, color: "#E08080", fontFamily: "Syne, sans-serif" }}>⚠ {r.renovacion}</span>
-                <span style={{ fontSize: 12, color: "var(--gold)", fontFamily: "Syne, sans-serif" }}>{r.prima}</span>
+                <span style={{ fontSize: 14, color: "#E08080", fontFamily: "Plus Jakarta Sans, sans-serif" }}>⚠ {r.renovacion}</span>
+                <span style={{ fontSize: 14, color: "var(--gold)", fontFamily: "Plus Jakarta Sans, sans-serif" }}>{r.prima}</span>
               </div>
             </div>
           ))
@@ -286,7 +286,7 @@ export default function Reports({ clients, policies, claims }) {
 
       {/* Preview siniestros */}
       <div style={{ background: "var(--card)", border: "0.5px solid var(--border)", borderRadius: 8, padding: 20 }}>
-        <div style={{ fontSize: 11, letterSpacing: "0.15em", color: "var(--mute)", textTransform: "uppercase", fontFamily: "Syne, sans-serif", marginBottom: 14 }}>
+        <div style={{ fontSize: 13, letterSpacing: "0.12em", color: "var(--mute)", textTransform: "uppercase", fontFamily: "Plus Jakarta Sans, sans-serif", marginBottom: 14 }}>
           Siniestros en curso
         </div>
         {siniestrosAbiertos.length === 0
@@ -295,19 +295,19 @@ export default function Reports({ clients, policies, claims }) {
             <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center",
               padding: "10px 0", borderBottom: "0.5px solid var(--border)", flexWrap: "wrap", gap: 8 }}>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text)", fontFamily: "Syne, sans-serif" }}>{s.cliente}</div>
-                <div style={{ fontSize: 12, color: "var(--mute)", fontFamily: "Syne, sans-serif", marginTop: 2,
+                <div style={{ fontSize: 15, fontWeight: 600, color: "var(--text)", fontFamily: "Plus Jakarta Sans, sans-serif" }}>{s.cliente}</div>
+                <div style={{ fontSize: 14, color: "var(--mute)", fontFamily: "Plus Jakarta Sans, sans-serif", marginTop: 2,
                   overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                   {s.descripcion}
                 </div>
-                <div style={{ fontSize: 11, color: "var(--mute)", fontFamily: "Syne, sans-serif", marginTop: 2 }}>
+                <div style={{ fontSize: 13, color: "var(--mute)", fontFamily: "Plus Jakarta Sans, sans-serif", marginTop: 2 }}>
                   {s.ramo} · {s.aseguradora} · Exp: {s.expediente}
                 </div>
               </div>
-              <span style={{ fontSize: 11, padding: "3px 10px", borderRadius: 999, flexShrink: 0,
+              <span style={{ fontSize: 13, padding: "3px 10px", borderRadius: 999, flexShrink: 0,
                 background: s.estado === "Abierto" ? "#1A0A0A" : "#1A1508",
                 color: s.estado === "Abierto" ? "#E08080" : "#C9A870",
-                fontFamily: "Syne, sans-serif" }}>{s.estado}</span>
+                fontFamily: "Plus Jakarta Sans, sans-serif" }}>{s.estado}</span>
             </div>
           ))
         }
@@ -317,9 +317,9 @@ export default function Reports({ clients, policies, claims }) {
 }
 
 const S = {
-  eyebrow: { fontSize: 10, letterSpacing: "0.2em", color: "var(--gold)", textTransform: "uppercase", marginBottom: 8, fontFamily: "Syne, sans-serif" },
-  title:   { fontSize: 32, fontWeight: 700, color: "var(--text)", margin: 0, letterSpacing: "-0.5px", fontFamily: "Syne, sans-serif" },
-  btn:     { display: "flex", alignItems: "center", gap: 8, padding: "12px 22px", color: "#fff", border: "none", borderRadius: 6, cursor: "pointer", fontSize: 13, fontWeight: 700, fontFamily: "Syne, sans-serif", letterSpacing: "0.08em", textTransform: "uppercase" },
-  empty:   { textAlign: "center", color: "var(--mute)", fontSize: 13, fontFamily: "Syne, sans-serif", padding: "1.5rem", letterSpacing: "0.08em" },
-  toast:   { position: "fixed", bottom: 28, left: "50%", transform: "translateX(-50%)", background: "var(--card)", border: "1px solid var(--goldDim)", color: "var(--gold)", padding: "11px 22px", borderRadius: 6, fontSize: 12, fontFamily: "Syne, sans-serif", letterSpacing: 1.5, textTransform: "uppercase", zIndex: 200 },
+  eyebrow: { fontSize: 13, letterSpacing: "0.2em", color: "var(--gold)", textTransform: "uppercase", marginBottom: 8, fontFamily: "Plus Jakarta Sans, sans-serif" },
+  title:   { fontSize: 40, fontWeight: 700, color: "var(--text)", margin: 0, letterSpacing: "-0.5px", fontFamily: "Plus Jakarta Sans, sans-serif" },
+  btn:     { display: "flex", alignItems: "center", gap: 8, padding: "12px 22px", color: "#fff", border: "none", borderRadius: 6, cursor: "pointer", fontSize: 13, fontWeight: 700, fontFamily: "Plus Jakarta Sans, sans-serif", letterSpacing: "0.08em", textTransform: "uppercase" },
+  empty:   { textAlign: "center", color: "var(--mute)", fontSize: 13, fontFamily: "Plus Jakarta Sans, sans-serif", padding: "1.5rem", letterSpacing: "0.08em" },
+  toast:   { position: "fixed", bottom: 28, left: "50%", transform: "translateX(-50%)", background: "var(--card)", border: "1px solid var(--goldDim)", color: "var(--gold)", padding: "11px 22px", borderRadius: 6, fontSize: 12, fontFamily: "Plus Jakarta Sans, sans-serif", letterSpacing: 1.5, textTransform: "uppercase", zIndex: 200 },
 };

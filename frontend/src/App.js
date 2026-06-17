@@ -65,6 +65,7 @@ export default function App() {
   const navigateTo = (newView, clientId = null) => {
     setView(newView);
     if (clientId) setSelectedClientId(clientId);
+    else if (newView !== "client_detail") setSelectedClientId(null);
     if (isMobile) setSidebarOpen(false);
   };
 
@@ -95,7 +96,7 @@ export default function App() {
       <Sidebar
         currentUser={currentUser}
         view={view}
-        setView={setView}
+        setView={navigateTo}
         onLogout={handleLogout}
         theme={theme}
         onToggleTheme={() => setTheme(t => t === "dark" ? "light" : "dark")}

@@ -39,24 +39,24 @@ export default function Activities({ policies, clients, onRefresh }) {
         borderRadius: 8, padding: "14px 16px" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 8 }}>
           <div>
-            <div style={{ fontFamily: "Syne, sans-serif", fontSize: 13, fontWeight: 600, color: "var(--text)" }}>
+            <div style={{ fontFamily: "Plus Jakarta Sans, sans-serif", fontSize: 13, fontWeight: 600, color: "var(--text)" }}>
               {client?.name || "—"}
             </div>
             <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 4 }}>
-              <span style={{ fontSize: 12, color: "var(--gold)", fontFamily: "Syne, sans-serif",
+              <span style={{ fontSize: 12, color: "var(--gold)", fontFamily: "Plus Jakarta Sans, sans-serif",
                 textTransform: "uppercase", letterSpacing: "0.06em" }}>{p.ramo}</span>
-              {p.aseguradora && <span style={{ fontSize: 12, color: "var(--mute)", fontFamily: "Syne, sans-serif" }}>{p.aseguradora}</span>}
-              {p.num_poliza  && <span style={{ fontSize: 12, color: "var(--mute)", fontFamily: "Syne, sans-serif" }}>Nº {p.num_poliza}</span>}
-              {p.prima_anual > 0 && <span style={{ fontSize: 12, color: "var(--gold)", fontFamily: "Syne, sans-serif" }}>{p.prima_anual.toLocaleString("es-ES")} €/año</span>}
+              {p.aseguradora && <span style={{ fontSize: 12, color: "var(--mute)", fontFamily: "Plus Jakarta Sans, sans-serif" }}>{p.aseguradora}</span>}
+              {p.num_poliza  && <span style={{ fontSize: 12, color: "var(--mute)", fontFamily: "Plus Jakarta Sans, sans-serif" }}>Nº {p.num_poliza}</span>}
+              {p.prima_anual > 0 && <span style={{ fontSize: 12, color: "var(--gold)", fontFamily: "Plus Jakarta Sans, sans-serif" }}>{p.prima_anual.toLocaleString("es-ES")} €/año</span>}
             </div>
           </div>
           <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
             <span style={{ fontSize: 10, padding: "3px 10px", borderRadius: 999,
               background: "var(--lift)", color: STAGE_COLORS[p.estado_tramite],
-              fontFamily: "Syne, sans-serif" }}>{p.estado_tramite}</span>
+              fontFamily: "Plus Jakarta Sans, sans-serif" }}>{p.estado_tramite}</span>
             {urgente
-              ? <span style={{ fontSize: 11, color: "#E08080", fontFamily: "Syne, sans-serif" }}>⚠ Vencida el {p.fecha_renovacion}</span>
-              : <span style={{ fontSize: 11, color: dias <= 15 ? "#E08080" : "var(--gold)", fontFamily: "Syne, sans-serif" }}>
+              ? <span style={{ fontSize: 11, color: "#E08080", fontFamily: "Plus Jakarta Sans, sans-serif" }}>⚠ Vencida el {p.fecha_renovacion}</span>
+              : <span style={{ fontSize: 11, color: dias <= 15 ? "#E08080" : "var(--gold)", fontFamily: "Plus Jakarta Sans, sans-serif" }}>
                   📅 {p.fecha_renovacion} · {dias} días
                 </span>
             }
@@ -118,9 +118,9 @@ export default function Activities({ policies, clients, onRefresh }) {
 }
 
 const S = {
-  eyebrow:   { fontSize: 10, letterSpacing: "0.2em", color: "var(--gold)", textTransform: "uppercase", marginBottom: 8, fontFamily: "Syne, sans-serif" },
-  title:     { fontSize: 32, fontWeight: 700, color: "var(--text)", margin: 0, letterSpacing: "-0.5px", fontFamily: "Syne, sans-serif" },
-  chip:      { padding: "6px 16px", borderRadius: 999, border: "0.5px solid var(--border)", background: "none", color: "var(--textSub)", cursor: "pointer", fontFamily: "Syne, sans-serif", fontSize: 10, fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase" },
+  eyebrow:   { fontSize: 10, letterSpacing: "0.2em", color: "var(--gold)", textTransform: "uppercase", marginBottom: 8, fontFamily: "Plus Jakarta Sans, sans-serif" },
+  title:     { fontSize: 32, fontWeight: 700, color: "var(--text)", margin: 0, letterSpacing: "-0.5px", fontFamily: "Plus Jakarta Sans, sans-serif" },
+  chip:      { padding: "6px 16px", borderRadius: 999, border: "0.5px solid var(--border)", background: "none", color: "var(--textSub)", cursor: "pointer", fontFamily: "Plus Jakarta Sans, sans-serif", fontSize: 10, fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase" },
   chipActive:{ border: "0.5px solid var(--gold)", color: "var(--bgApp)", background: "var(--gold)", fontWeight: 700 },
-  empty:     { textAlign: "center", color: "var(--mute)", fontSize: 13, fontFamily: "Syne, sans-serif", padding: "3rem", letterSpacing: "0.08em" },
+  empty:     { textAlign: "center", color: "var(--mute)", fontSize: 13, fontFamily: "Plus Jakarta Sans, sans-serif", padding: "3rem", letterSpacing: "0.08em" },
 };

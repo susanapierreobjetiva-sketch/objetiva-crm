@@ -9,16 +9,16 @@ const Icon = ({ d, size = 16 }) => (
 
 const LogoMark = ({ gold = "#C9A870" }) => (
   <svg viewBox="0 0 32 32" width="32" height="32" fill="none">
-    <rect x="1" y="1" width="30" height="30" rx="7" stroke={gold} strokeWidth="1.2" fill="none"/>
-    <path d="M16 6L24 10.5V21.5L16 26L8 21.5V10.5L16 6Z" stroke={gold} strokeWidth="1.4" fill="none"/>
-    <circle cx="16" cy="14" r="3.5" stroke={gold} strokeWidth="1.2" fill="none"/>
-    <line x1="16" y1="17.5" x2="16" y2="22" stroke={gold} strokeWidth="1.2" strokeLinecap="round"/>
-    <line x1="13.5" y1="20" x2="18.5" y2="20" stroke={gold} strokeWidth="1.2" strokeLinecap="round"/>
+    <rect width="32" height="32" rx="6" fill="#1A1208"/>
+    <circle cx="16" cy="16" r="12" fill="none" stroke={gold} strokeWidth="0.8"/>
+    <text x="16" y="13.5" textAnchor="middle" fontFamily="Georgia,serif" fontWeight="400" fontSize="6.5" fill={gold} letterSpacing="0.3">OBJ</text>
+    <line x1="9.5" y1="16" x2="22.5" y2="16" stroke={gold} strokeWidth="0.5" opacity="0.7"/>
+    <text x="16" y="20.5" textAnchor="middle" fontFamily="Arial,sans-serif" fontWeight="300" fontSize="4" fill={gold} letterSpacing="2" opacity="0.8">CRM</text>
   </svg>
 );
 
 const NAV = [
-  { id: "dashboard",  label: "Dashboard",    icon: "M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" },
+  { id: "dashboard",  label: "Panel Principal",    icon: "M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" },
   { id: "clients",    label: "Clientes",     icon: "M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z" },
   { id: "pipeline",   label: "Estado de pólizas",     icon: "M22 12h-4l-3 9L9 3l-3 9H2" },
   { id: "activities", label: "Renovaciones", icon: "M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2z" },
@@ -45,10 +45,10 @@ export default function Sidebar({ currentUser, view, setView, onLogout, theme, o
       <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "16px 16px 4px" }}>
         <LogoMark gold={T.gold} />
         <div>
-          <div style={{ fontFamily: "Syne, sans-serif", fontSize: 17, fontWeight: 700, letterSpacing: "0.08em" }}>
+          <div style={{ fontFamily: "Plus Jakarta Sans, sans-serif", fontSize: 17, fontWeight: 700, letterSpacing: "0.08em" }}>
             <span style={{ color: T.text }}>OBJ</span><span style={{ color: T.gold }}>CRM</span>
           </div>
-          <div style={{ fontFamily: "Syne, sans-serif", fontSize: 8, letterSpacing: "0.18em",
+          <div style={{ fontFamily: "Plus Jakarta Sans, sans-serif", fontSize: 10, letterSpacing: "0.15em",
             color: T.mute, marginTop: 3, textTransform: "uppercase" }}>Gestión de Clientes</div>
         </div>
       </div>
@@ -64,11 +64,11 @@ export default function Sidebar({ currentUser, view, setView, onLogout, theme, o
           {currentUser.avatar}
         </div>
         <div style={{ overflow: "hidden" }}>
-          <div style={{ fontFamily: "Syne, sans-serif", fontSize: 13, fontWeight: 700,
+          <div style={{ fontFamily: "Plus Jakarta Sans, sans-serif", fontSize: 13, fontWeight: 700,
             color: T.text, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
             {currentUser.name}
           </div>
-          <div style={{ fontFamily: "Syne, sans-serif", fontSize: 9, color: T.gold,
+          <div style={{ fontFamily: "Plus Jakarta Sans, sans-serif", fontSize: 11, color: T.gold,
             textTransform: "uppercase", marginTop: 2 }}>{currentUser.dept}</div>
         </div>
       </div>
@@ -87,7 +87,7 @@ export default function Sidebar({ currentUser, view, setView, onLogout, theme, o
                 ? T.hover : "none",
               color: view === item.id || (view === "client_detail" && item.id === "clients")
                 ? T.gold : T.text,
-              cursor: "pointer", fontFamily: "Syne, sans-serif",
+              cursor: "pointer", fontFamily: "Plus Jakarta Sans, sans-serif",
               fontSize: 13, fontWeight: 500, letterSpacing: "0.03em",
               textAlign: "left", width: "100%",
               opacity: view === item.id || (view === "client_detail" && item.id === "clients") ? 1 : 0.65,
@@ -105,15 +105,15 @@ export default function Sidebar({ currentUser, view, setView, onLogout, theme, o
         <button onClick={onToggleTheme}
           style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 10px",
             borderRadius: 5, border: `0.5px solid ${T.goldDim}`, background: "none",
-            color: T.goldDim, cursor: "pointer", fontSize: 9,
-            fontFamily: "Syne, sans-serif", letterSpacing: "0.1em", width: "100%", textTransform: "uppercase" }}>
+            color: T.goldDim, cursor: "pointer", fontSize: 11,
+            fontFamily: "Plus Jakarta Sans, sans-serif", letterSpacing: "0.1em", width: "100%", textTransform: "uppercase" }}>
           {theme === "dark" ? "☀ Modo claro" : "☾ Modo oscuro"}
         </button>
         <button onClick={onLogout}
           style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 10px",
             borderRadius: 5, border: `0.5px solid ${T.goldDim}`, background: "none",
-            color: T.goldDim, cursor: "pointer", fontSize: 9,
-            fontFamily: "Syne, sans-serif", letterSpacing: "0.1em", width: "100%", textTransform: "uppercase" }}>
+            color: T.goldDim, cursor: "pointer", fontSize: 11,
+            fontFamily: "Plus Jakarta Sans, sans-serif", letterSpacing: "0.1em", width: "100%", textTransform: "uppercase" }}>
           <Icon d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" size={13} />
           Cerrar sesión
         </button>
