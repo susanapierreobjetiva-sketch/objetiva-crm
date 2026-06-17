@@ -51,18 +51,25 @@ export const api = {
     localStorage.setItem("crm_token", token);
     return data;
   }),
-  validate2fa: (temp_token, code) => fetch(`${BASE}/auth/2fa/validate`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    credentials: "include",
-    body: JSON.stringify({ temp_token, code }),
-  }).then(async r => {
+  validate2fa: async (temp_token, code) => {
+    const r = await fetch(`${BASE}/auth/2fa/validate`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ temp_token, code }),
+    });
     if (!r.ok) { const e = await r.json(); throw new Error(e.detail); }
     const data = await r.json();
     token = data.access_token;
     localStorage.setItem("crm_token", token);
-    return data;
-  }),
+    // Obtener datos del usuario
+    const meRes = await fetch(`${BASE}/auth/me`, {
+      headers: { Authorization: `Bearer ${token}` },
+      credentials: "include",
+    });
+    const user = await meRes.json();
+    return { ...data, user };
+  },
   setup2fa:       ()                    => request("POST", "/auth/2fa/setup"),
   verifySetup2fa: (code)                => request("POST", "/auth/2fa/verify-setup", { code }),
   disable2fa:     (code)                => request("POST", "/auth/2fa/disable", { code }),
