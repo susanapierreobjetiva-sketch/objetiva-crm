@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { api } from "../api";
+import { useIsMobile } from "../useIsMobile";
+import ExportButton from "./ExportButton";
 
 const STAGES = ["Nuevo", "En seguimiento", "Negociación", "Emitido", "Anulado"];
 const STAGE_COLORS = {
@@ -20,10 +22,9 @@ const STAGE_BG = {
 export default function Pipeline({ policies, clients, onRefresh }) {
   const [dragging, setDragging] = useState(null);
   const [toast, setToast]       = useState("");
-  const isMobile = window.innerWidth <= 768;
+  const isMobile = useIsMobile();
 
   const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(""), 2500); };
-
   const getClient = (clientId) => clients.find(c => c.id === clientId);
 
   const handleDrop = async (stage) => {
@@ -37,7 +38,7 @@ export default function Pipeline({ policies, clients, onRefresh }) {
   };
 
   const byStage = (stage) => policies.filter(p => p.estado_tramite === stage);
-  const today = new Date().toISOString().split("T")[0];
+  const today   = new Date().toISOString().split("T")[0];
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
@@ -48,7 +49,21 @@ export default function Pipeline({ policies, clients, onRefresh }) {
         <h1 style={S.title}>Estado de Pólizas</h1>
       </div>
 
-      {/* Resumen */}
+      <ExportButton
+        title="Pólizas" filename="polizas" data={policies}
+        columns={[
+          { label: "Cliente",        value: r => { const c = clients.find(x => x.id === r.client_id); return c?.name || r.client_id; } },
+          { label: "Ramo",           value: r => r.ramo },
+          { label: "Aseguradora",    value: r => r.aseguradora },
+          { label: "Nº Póliza",      value: r => r.num_poliza },
+          { label: "Prima anual",    value: r => r.prima_anual },
+          { label: "Fecha efecto",   value: r => r.fecha_efecto },
+          { label: "Renovación",     value: r => r.fecha_renovacion },
+          { label: "Estado trámite", value: r => r.estado_tramite },
+          { label: "Estado póliza",  value: r => r.estado_poliza },
+        ]}
+      />
+
       <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
         {STAGES.map(stage => (
           <div key={stage} style={{ fontSize: 13, color: STAGE_COLORS[stage],
@@ -58,8 +73,8 @@ export default function Pipeline({ policies, clients, onRefresh }) {
         ))}
       </div>
 
-      {/* Kanban */}
-      <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", gap: 12, overflowX: isMobile ? "visible" : "auto", paddingBottom: 12 }}>
+      <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row",
+        gap: 12, overflowX: isMobile ? "visible" : "auto", paddingBottom: 12 }}>
         {STAGES.map(stage => (
           <div key={stage}
             onDragOver={e => e.preventDefault()}
@@ -81,31 +96,25 @@ export default function Pipeline({ policies, clients, onRefresh }) {
                 {byStage(stage).length}
               </span>
             </div>
-
             {byStage(stage).map(p => {
               const client = getClient(p.client_id);
               return (
                 <div key={p.id} draggable
                   onDragStart={() => setDragging(p)}
                   onDragEnd={() => setDragging(null)}
-                  style={{
-                    background: "var(--card)", border: "0.5px solid var(--border)",
+                  style={{ background: "var(--card)", border: "0.5px solid var(--border)",
                     borderRadius: 6, padding: "10px 12px", cursor: "grab",
                     opacity: dragging?.id === p.id ? 0.5 : 1,
-                    boxShadow: "0 2px 8px rgba(0,0,0,0.3)",
-                  }}>
-                  {/* Cliente */}
+                    boxShadow: "0 2px 8px rgba(0,0,0,0.3)" }}>
                   <div style={{ fontSize: 16, color: "var(--gold)", fontFamily: "Plus Jakarta Sans, sans-serif",
                     fontWeight: 600, marginBottom: 2, overflow: "hidden",
                     textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                     {client?.name || "—"}
                   </div>
-                  {/* Ramo */}
                   <div style={{ fontSize: 13, color: "var(--gold)", fontFamily: "Plus Jakarta Sans, sans-serif",
                     letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 2 }}>
                     {p.ramo}
                   </div>
-                  {/* Aseguradora */}
                   {p.aseguradora && (
                     <div style={{ fontSize: 16, color: "var(--mute)", fontFamily: "Plus Jakarta Sans, sans-serif",
                       overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
@@ -113,11 +122,9 @@ export default function Pipeline({ policies, clients, onRefresh }) {
                     </div>
                   )}
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 8 }}>
-                    {p.prima_anual > 0 ? (
-                      <span style={{ fontSize: 16, color: "var(--gold)", fontFamily: "Plus Jakarta Sans, sans-serif" }}>
-                        {p.prima_anual.toLocaleString("es-ES")} €
-                      </span>
-                    ) : <span />}
+                    {p.prima_anual > 0
+                      ? <span style={{ fontSize: 16, color: "var(--gold)", fontFamily: "Plus Jakarta Sans, sans-serif" }}>{p.prima_anual.toLocaleString("es-ES")} €</span>
+                      : <span />}
                     {p.fecha_renovacion && p.fecha_renovacion <= today && (
                       <span title={`Renovación: ${p.fecha_renovacion}`} style={{ fontSize: 12 }}>⚠️</span>
                     )}
@@ -125,7 +132,6 @@ export default function Pipeline({ policies, clients, onRefresh }) {
                 </div>
               );
             })}
-
             {byStage(stage).length === 0 && (
               <div style={{ textAlign: "center", color: "var(--mute)", fontSize: 13,
                 fontFamily: "Plus Jakarta Sans, sans-serif", padding: "1rem 0", letterSpacing: "0.08em" }}>

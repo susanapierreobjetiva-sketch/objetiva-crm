@@ -1,3 +1,4 @@
+import ExportButton from "./ExportButton";
 import { useState } from "react";
 
 const ESTADO_COLORS = {
@@ -14,20 +15,31 @@ const Icon = ({ d, size = 16 }) => (
 );
 
 export default function Claims({ claims, clients, policies, onRefresh, currentUser }) {
-  const [filter, setFilter] = useState("Todos");
-  const [search, setSearch] = useState("");
+  const [filter, setFilter]         = useState("Todos");
+  const [search, setSearch]         = useState("");
+  const [filterRamo, setFilterRamo] = useState("Todos");
+  const [filterAseg, setFilterAseg] = useState("Todos");
+  const [showFilters, setShowFilters] = useState(false);
 
   const getClient = (clientId) => clients.find(c => c.id === clientId);
 
+  const ramos = [...new Set(claims.map(c => c.ramo).filter(Boolean))].sort();
+  const aseguradoras = [...new Set(claims.map(c => c.aseguradora).filter(Boolean))].sort();
+
   const filtered = claims.filter(c => {
     const matchFilter = filter === "Todos" || c.estado === filter;
+    const matchRamo   = filterRamo === "Todos" || c.ramo === filterRamo;
+    const matchAseg   = filterAseg === "Todos" || c.aseguradora === filterAseg;
     const client      = getClient(c.client_id);
     const matchSearch = c.descripcion.toLowerCase().includes(search.toLowerCase()) ||
       (client?.name || "").toLowerCase().includes(search.toLowerCase()) ||
       (c.num_expediente || "").toLowerCase().includes(search.toLowerCase()) ||
       (c.aseguradora || "").toLowerCase().includes(search.toLowerCase());
-    return matchFilter && matchSearch;
+    return matchFilter && matchRamo && matchAseg && matchSearch;
   });
+
+  const activeFilters = (filter !== "Todos" ? 1 : 0) + (filterRamo !== "Todos" ? 1 : 0) + (filterAseg !== "Todos" ? 1 : 0);
+  const resetFilters = () => { setFilter("Todos"); setFilterRamo("Todos"); setFilterAseg("Todos"); };
 
   const abiertos   = claims.filter(c => c.estado === "Abierto").length;
   const enGestion  = claims.filter(c => c.estado === "En gestión").length;
@@ -40,7 +52,22 @@ export default function Claims({ claims, clients, policies, onRefresh, currentUs
         <h1 style={S.title}>Siniestros</h1>
       </div>
 
-      {/* KPIs */}
+              <ExportButton
+            title="Siniestros"
+            filename="siniestros"
+            data={filtered || claims}
+            columns={[
+              { label: "Cliente",        value: r => { const c = clients.find(x => x.id === r.client_id); return c?.name || r.client_id; } },
+              { label: "Ramo",           value: r => r.ramo },
+              { label: "Aseguradora",    value: r => r.aseguradora },
+              { label: "Nº Expediente",  value: r => r.num_expediente },
+              { label: "Fecha",          value: r => r.fecha_siniestro },
+              { label: "Descripción",    value: r => r.descripcion },
+              { label: "Estado",         value: r => r.estado },
+              { label: "Resolución",     value: r => r.resolucion },
+            ]}
+          />
+{/* KPIs */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))", gap: 10 }}>
         {[
           { label: "Abiertos",    value: abiertos,  color: "#E08080" },
@@ -59,10 +86,23 @@ export default function Claims({ claims, clients, policies, onRefresh, currentUs
 
       {/* Filtros */}
       <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-        <div style={S.searchWrap}>
-          <Icon d="M21 21l-6-6m2-5a7 7 0 1 1-14 0 7 7 0 0 1 14 0" size={15} stroke="var(--mute)" />
-          <input value={search} onChange={e => setSearch(e.target.value)}
-            placeholder="Buscar por cliente, expediente, aseguradora..." style={S.searchInput} />
+        <div style={{ display: "flex", gap: 10 }}>
+          <div style={{ ...S.searchWrap, flex: 1 }}>
+            <Icon d="M21 21l-6-6m2-5a7 7 0 1 1-14 0 7 7 0 0 1 14 0" size={15} stroke="var(--mute)" />
+            <input value={search} onChange={e => setSearch(e.target.value)}
+              placeholder="Buscar por cliente, expediente, aseguradora..." style={S.searchInput} />
+          </div>
+          <button onClick={() => setShowFilters(o => !o)}
+            style={{ ...S.chip, ...(showFilters || activeFilters > 0 ? S.chipActive : {}),
+              display: "flex", alignItems: "center", gap: 6, whiteSpace: "nowrap" }}>
+            ⚙ Filtros {activeFilters > 0 && `(${activeFilters})`}
+          </button>
+          {activeFilters > 0 && (
+            <button onClick={resetFilters}
+              style={{ ...S.chip, color: "#E08080", borderColor: "#8B3A3A" }}>
+              ✕ Limpiar
+            </button>
+          )}
         </div>
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
           {["Todos", "Abierto", "En gestión", "Cerrado"].map(f => (
@@ -70,6 +110,25 @@ export default function Claims({ claims, clients, policies, onRefresh, currentUs
               style={{ ...S.chip, ...(filter === f ? S.chipActive : {}) }}>{f}</button>
           ))}
         </div>
+        {showFilters && (
+          <div style={{ background: "var(--card)", border: "0.5px solid var(--border)",
+            borderRadius: 8, padding: "16px 20px", display: "flex", flexWrap: "wrap", gap: 16 }}>
+            <div style={{ minWidth: 180, flex: 1 }}>
+              <div style={S.filterLabel}>Ramo</div>
+              <select value={filterRamo} onChange={e => setFilterRamo(e.target.value)} style={S.filterSelect}>
+                <option value="Todos">Todos</option>
+                {ramos.map(r => <option key={r}>{r}</option>)}
+              </select>
+            </div>
+            <div style={{ minWidth: 180, flex: 1 }}>
+              <div style={S.filterLabel}>Aseguradora</div>
+              <select value={filterAseg} onChange={e => setFilterAseg(e.target.value)} style={S.filterSelect}>
+                <option value="Todos">Todas</option>
+                {aseguradoras.map(a => <option key={a}>{a}</option>)}
+              </select>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Lista */}
@@ -123,6 +182,8 @@ export default function Claims({ claims, clients, policies, onRefresh, currentUs
 const S = {
   eyebrow:    { fontSize: 13, letterSpacing: "0.2em", color: "var(--gold)", textTransform: "uppercase", marginBottom: 8, fontFamily: "Plus Jakarta Sans, sans-serif" },
   title:      { fontSize: 40, fontWeight: 700, color: "var(--text)", margin: 0, letterSpacing: "-0.5px", fontFamily: "Plus Jakarta Sans, sans-serif" },
+  filterLabel:  { fontSize: 10, letterSpacing: "0.15em", color: "var(--mute)", textTransform: "uppercase", fontFamily: "Plus Jakarta Sans, sans-serif", marginBottom: 6 },
+  filterSelect: { width: "100%", background: "var(--lift)", border: "0.5px solid var(--border)", color: "var(--text)", padding: "8px 12px", borderRadius: 6, fontFamily: "Plus Jakarta Sans, sans-serif", fontSize: 13, outline: "none", boxSizing: "border-box" },
   searchWrap: { display: "flex", alignItems: "center", gap: 10, background: "var(--card)", border: "0.5px solid var(--border)", borderRadius: 8, padding: "10px 16px" },
   searchInput:{ flex: 1, background: "none", border: "none", color: "var(--text)", fontFamily: "Plus Jakarta Sans, sans-serif", fontSize: 13, outline: "none" },
   chip:       { padding: "5px 14px", borderRadius: 999, border: "0.5px solid var(--border)", background: "none", color: "var(--textSub)", cursor: "pointer", fontFamily: "Plus Jakarta Sans, sans-serif", fontSize: 11, fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase" },

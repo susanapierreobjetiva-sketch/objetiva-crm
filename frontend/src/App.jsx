@@ -11,6 +11,8 @@ import Activities from "./components/Activities";
 import Claims from "./components/Claims";
 import Reports from "./components/Reports";
 import Profile from "./components/Profile";
+import Notifications from "./components/Notifications";
+import Tasks from "./components/Tasks";
 
 if (!document.getElementById("crm-fonts")) {
   const l = document.createElement("link");
@@ -28,11 +30,24 @@ export default function App() {
   const [policies, setPolicies]       = useState([]);
   const [claims, setClaims]           = useState([]);
   const [loading, setLoading]         = useState(false);
+  const [loadError, setLoadError]     = useState("");
+  const [restoring, setRestoring]     = useState(true); // restaurar sesión al inicio
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isMobile, setIsMobile]       = useState(window.innerWidth <= 768);
   const [selectedClientId, setSelectedClientId] = useState(null);
 
   const T = theme === "dark" ? DARK : LIGHT;
+
+  // Restaurar sesión via refresh cookie al recargar la página
+  useEffect(() => {
+    api.restoreSession().then(user => {
+      if (user) {
+        setCurrentUser(user);
+        setTheme(user.theme || "dark");
+      }
+      setRestoring(false);
+    });
+  }, []);
 
   useEffect(() => {
     const handler = () => setIsMobile(window.innerWidth <= 768);
@@ -44,6 +59,7 @@ export default function App() {
 
   const loadAll = async () => {
     setLoading(true);
+    setLoadError("");
     try {
       const [c, p, cl] = await Promise.all([
         api.getClients(),
@@ -53,8 +69,11 @@ export default function App() {
       setClients(c);
       setPolicies(p);
       setClaims(cl);
-    } catch {}
-    finally { setLoading(false); }
+    } catch (e) {
+      setLoadError(e.message || "Error al cargar los datos. Comprueba tu conexión.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleLogout = async () => {
@@ -70,7 +89,19 @@ export default function App() {
     if (isMobile) setSidebarOpen(false);
   };
 
-  if (!currentUser) return <Login onLogin={user => { setCurrentUser(user); setTheme(user.theme || "dark"); }} />;
+  // Pantalla de carga mientras restauramos sesión
+  if (restoring) return (
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "center",
+      height: "100vh", background: "#0A0804", color: "#C9A870",
+      fontFamily: "Plus Jakarta Sans, sans-serif", fontSize: 12,
+      letterSpacing: "0.2em", textTransform: "uppercase" }}>
+      Cargando...
+    </div>
+  );
+
+  if (!currentUser) return (
+    <Login onLogin={user => { setCurrentUser(user); setTheme(user.theme || "dark"); }} />
+  );
 
   const selectedClient = clients.find(c => c.id === selectedClientId);
   const clientPolicies = policies.filter(p => p.client_id === selectedClientId);
@@ -80,7 +111,7 @@ export default function App() {
     <div style={{
       display: "flex", height: "100vh", overflow: "hidden",
       background: T.bgApp, color: T.text,
-      fontFamily: "'Instrument Sans', sans-serif", fontSize: '16px',
+      fontFamily: "'Instrument Sans', sans-serif", fontSize: "16px",
       "--bg": T.bg, "--bgApp": T.bgApp, "--sidebar": T.sidebar,
       "--card": T.card, "--lift": T.lift, "--border": T.border,
       "--gold": T.gold, "--goldDim": T.goldDim, "--goldHi": T.goldHi,
@@ -104,6 +135,9 @@ export default function App() {
         sidebarOpen={sidebarOpen}
         setSidebarOpen={setSidebarOpen}
         isMobile={isMobile}
+        policies={policies}
+        clients={clients}
+        onNavigate={navigateTo}
       />
 
       <main style={{
@@ -111,13 +145,20 @@ export default function App() {
         marginLeft: isMobile ? 0 : 220,
         padding: isMobile ? "60px 16px 24px" : "32px 40px",
       }}>
+        {!isMobile && (
+          <div style={{ position: "fixed", top: 16, right: 24, zIndex: 100 }}>
+            <Notifications policies={policies} clients={clients} onNavigate={navigateTo} theme={theme} />
+          </div>
+        )}
         {isMobile && (
-          <button onClick={() => setSidebarOpen(o => !o)}
-            style={{ position: "fixed", top: 12, left: 12, zIndex: 200,
-              background: T.card, border: `1px solid ${T.border}`,
-              borderRadius: 6, padding: "6px 10px", cursor: "pointer",
-              color: T.gold, fontSize: 18,
-              backdropFilter: "none", isolation: "isolate" }}>☰</button>
+          <div style={{ position: "fixed", top: 10, left: 12, right: 12, zIndex: 200,
+            display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <button onClick={() => setSidebarOpen(o => !o)}
+              style={{ background: T.card, border: `1px solid ${T.border}`,
+                borderRadius: 6, padding: "6px 10px", cursor: "pointer",
+                color: T.gold, fontSize: 18 }}>☰</button>
+            <Notifications policies={policies} clients={clients} onNavigate={navigateTo} theme={theme} />
+          </div>
         )}
 
         {loading && (
@@ -127,50 +168,42 @@ export default function App() {
           </div>
         )}
 
-        {view === "dashboard" && (
-          <Dashboard clients={clients} policies={policies} claims={claims} onNavigate={navigateTo} />
+        {loadError && (
+          <div style={{ background: "#3A1A1A", border: "0.5px solid #8B3A3A", color: "#E08080",
+            padding: "12px 16px", borderRadius: 6, fontSize: 13, marginBottom: 20,
+            fontFamily: "Plus Jakarta Sans, sans-serif", display: "flex",
+            justifyContent: "space-between", alignItems: "center" }}>
+            <span>⚠ {loadError}</span>
+            <button onClick={loadAll}
+              style={{ background: "none", border: "0.5px solid #8B3A3A", color: "#E08080",
+                borderRadius: 4, padding: "4px 10px", cursor: "pointer",
+                fontSize: 11, fontFamily: "Plus Jakarta Sans, sans-serif",
+                letterSpacing: "0.1em", textTransform: "uppercase" }}>
+              Reintentar
+            </button>
+          </div>
         )}
 
-        {view === "clients" && !selectedClientId && (
-          <ClientList
-            clients={clients} policies={policies}
-            onRefresh={loadAll} currentUser={currentUser}
-            onSelect={id => { setSelectedClientId(id); setView("client_detail"); }}
-          />
+        {view === "dashboard"     && <Dashboard clients={clients} policies={policies} claims={claims} onNavigate={navigateTo} />}
+        {view === "clients"       && !selectedClientId && (
+          <ClientList clients={clients} policies={policies} onRefresh={loadAll}
+            currentUser={currentUser}
+            onSelect={id => { setSelectedClientId(id); setView("client_detail"); }} />
         )}
-
         {view === "client_detail" && selectedClient && (
-          <ClientDetail
-            client={selectedClient}
-            policies={clientPolicies}
-            claims={clientClaims}
-            onRefresh={loadAll}
-            currentUser={currentUser}
-            onBack={() => { setSelectedClientId(null); setView("clients"); }}
-          />
+          <ClientDetail client={selectedClient} policies={clientPolicies} claims={clientClaims}
+            onRefresh={loadAll} currentUser={currentUser}
+            onBack={() => { setSelectedClientId(null); setView("clients"); }} />
         )}
-
-        {view === "pipeline" && (
-          <Pipeline policies={policies} clients={clients} onRefresh={loadAll} currentUser={currentUser} />
-        )}
-
-        {view === "activities" && (
-          <Activities policies={policies} clients={clients} onRefresh={loadAll} />
-        )}
-
-        {view === "claims" && (
-          <Claims claims={claims} clients={clients} policies={policies} onRefresh={loadAll} currentUser={currentUser} />
-        )}
-        {view === "reports" && (
-          <Reports clients={clients} policies={policies} claims={claims} />
-        )}
-        {view === "profile" && (
-          <Profile
-            currentUser={currentUser}
-            theme={theme}
+        {view === "pipeline"      && <Pipeline policies={policies} clients={clients} onRefresh={loadAll} currentUser={currentUser} />}
+        {view === "activities"    && <Activities policies={policies} clients={clients} onRefresh={loadAll} />}
+        {view === "claims"        && <Claims claims={claims} clients={clients} policies={policies} onRefresh={loadAll} currentUser={currentUser} />}
+        {view === "tasks"         && <Tasks clients={clients} currentUser={currentUser} />}
+        {view === "reports"       && <Reports clients={clients} policies={policies} claims={claims} />}
+        {view === "profile"       && (
+          <Profile currentUser={currentUser} theme={theme}
             onToggleTheme={() => setTheme(t => t === "dark" ? "light" : "dark")}
-            onUpdate={setCurrentUser}
-          />
+            onUpdate={setCurrentUser} />
         )}
       </main>
     </div>

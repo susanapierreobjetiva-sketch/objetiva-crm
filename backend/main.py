@@ -7,7 +7,7 @@ import os
 
 load_dotenv()
 
-app = FastAPI(title="Objetiva CRM")
+app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None)
 
 app.add_middleware(
     CORSMiddleware,

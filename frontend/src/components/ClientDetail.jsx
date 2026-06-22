@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { api } from "../api";
+import ConfirmModal from "./ConfirmModal";
 
 const emptyTesisPolicy = {
   ramo: "", aseguradora: "", num_poliza: "", prima_anual: 0,
@@ -11,8 +12,8 @@ const emptyTesisClaim = {
   descripcion: "", resolucion: "", importe: 0, estado: "Cerrado",
 };
 
-const RAMOS = ["Hogar", "Auto", "Vida", "Salud", "Empresa", "Responsabilidad Civil", "Decesos", "Viaje", "Otros"];
-const ASEGURADORAS = ["Mapfre", "Allianz", "AXA", "Generali", "Zurich", "Mutua Madrileña", "Santalucía", "Caser", "Reale", "Helvetia", "Avant2", "Otras"];
+const RAMOS = ["Hogar", "Auto", "Vida", "Salud", "Empresa", "Responsabilidad Civil", "Decesos", "Viaje", "Comunidades", "Otros"];
+const ASEGURADORAS = ["Mapfre", "Allianz", "AXA", "Generali", "Zurich", "Mutua Madrileña", "Santalucía", "Caser", "Reale", "Helvetia", "Occident", "Otras"];
 const STAGES = ["Nuevo", "En seguimiento", "Negociación", "Emitido", "Anulado"];
 const STAGE_COLORS = {
   "Nuevo": "#7A6E58", "En seguimiento": "#C9A870",
@@ -53,9 +54,80 @@ export default function ClientDetail({ client, policies, claims, onRefresh, curr
   const [tesisPolicyForm, setTesisPolicyForm] = useState(emptyTesisPolicy);
   const [tesisClaimForm, setTesisClaimForm]   = useState(emptyTesisClaim);
   const [saving, setSaving]         = useState(false);
+  const [confirmModal, setConfirmModal] = useState(null); // { action, title, message, detail }
   const [toast, setToast]           = useState("");
+  const [documents, setDocuments]   = useState([]);
+  const [docsLoading, setDocsLoading] = useState(false);
+  const [uploadDesc, setUploadDesc] = useState("");
+  const fileInputRef = useRef(null);
 
   const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(""), 2500); };
+
+  const loadDocuments = async () => {
+    setDocsLoading(true);
+    try {
+      const docs = await api.getDocuments("client", client.id);
+      setDocuments(docs);
+    } catch (e) { console.error(e); }
+    setDocsLoading(false);
+  };
+
+  useEffect(() => { if (tab === "documentos") loadDocuments(); }, [tab]);
+
+  const handleUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setSaving(true);
+    try {
+      await api.uploadDocument("client", client.id, file, uploadDesc);
+      await api.addActivity(client.id, `Documento subido: ${file.name}${uploadDesc ? " — " + uploadDesc : ""}`);
+      await loadDocuments();
+      await onRefresh();
+      setUploadDesc("");
+      showToast("Documento subido ✓");
+    } catch (err) { showToast(err.message || "Error al subir"); }
+    setSaving(false);
+    e.target.value = "";
+  };
+
+  const handleDeleteDoc = async (docId) => {
+    const doc = documents.find(d => d.id === docId);
+    setConfirmModal({
+      title: "Eliminar documento",
+      message: "Esta acción no se puede deshacer.",
+      detail: [{ icon: "📎", label: "Archivo", value: doc?.original_name || docId }],
+      onConfirm: async () => { setConfirmModal(null); await _doDeleteDoc(docId); }
+    });
+  };
+
+  const _doDeleteDoc = async (docId) => {
+    try {
+      const doc = documents.find(d => d.id === docId);
+      await api.deleteDocument(docId);
+      if (doc) await api.addActivity(client.id, `Documento eliminado: ${doc.original_name}`);
+      await loadDocuments();
+      await onRefresh();
+      showToast("Documento eliminado");
+    } catch (err) { showToast(err.message || "Error"); }
+  };
+
+  const handleDownload = async (docId, filename) => {
+    try { await api.downloadDocument(docId, filename); }
+    catch (err) { showToast("Error al descargar"); }
+  };
+
+  const formatSize = (bytes) => {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  };
+
+  const fileIcon = (contentType) => {
+    if (contentType === "application/pdf") return "📄";
+    if (contentType?.startsWith("image/")) return "🖼";
+    if (contentType?.includes("word")) return "📝";
+    return "📎";
+  };
 
   const setP = (k, v) => setPolicyForm(d => ({ ...d, [k]: v }));
   const setC = (k, v) => setClaimForm(d => ({ ...d, [k]: v }));
@@ -74,6 +146,10 @@ export default function ClientDetail({ client, policies, claims, onRefresh, curr
       if (editPolicyId) await api.updatePolicy(editPolicyId, { ...policyForm, client_id: client.id });
       else              await api.createPolicy({ ...policyForm, client_id: client.id });
       await onRefresh();
+      const msg = editPolicyId
+        ? `Póliza editada: ${policyForm.ramo} · ${policyForm.aseguradora} · Nº ${policyForm.num_poliza || "—"}`
+        : `Póliza añadida: ${policyForm.ramo} · ${policyForm.aseguradora} · Nº ${policyForm.num_poliza || "—"}`;
+      await api.addActivity(client.id, msg);
       setShowPolicyForm(false); setEditPolicyId(null); setPolicyForm(emptyPolicy);
       showToast(editPolicyId ? "Póliza actualizada ✓" : "Póliza añadida ✓");
     } catch (e) { showToast(e.message || "Error"); }
@@ -81,8 +157,21 @@ export default function ClientDetail({ client, policies, claims, onRefresh, curr
   };
 
   const handleDeletePolicy = async (id) => {
-    if (!window.confirm("¿Eliminar esta póliza?")) return;
-    try { await api.deletePolicy(id); await onRefresh(); showToast("Póliza eliminada"); }
+    const pol = policies.find(p => p.id === id);
+    setConfirmModal({
+      title: "Eliminar póliza",
+      message: "Se eliminará esta póliza permanentemente.",
+      detail: [{ icon: "📋", label: "Póliza", value: `${pol?.ramo || ""} · ${pol?.aseguradora || ""} · Nº ${pol?.num_poliza || "—"}` }],
+      onConfirm: async () => { setConfirmModal(null); await _doDeletePolicy(id); }
+    });
+  };
+
+  const _doDeletePolicy = async (id) => {
+    try {
+      const pol = policies.find(p => p.id === id);
+      await api.deletePolicy(id);
+      if (pol) await api.addActivity(client.id, `Póliza eliminada: ${pol.ramo} · ${pol.aseguradora} · Nº ${pol.num_poliza || "—"}`);
+      await onRefresh(); showToast("Póliza eliminada"); }
     catch (e) { showToast(e.message || "Error"); }
   };
 
@@ -94,6 +183,10 @@ export default function ClientDetail({ client, policies, claims, onRefresh, curr
       if (editClaimId) await api.updateClaim(editClaimId, { ...claimForm, client_id: client.id });
       else             await api.createClaim({ ...claimForm, client_id: client.id });
       await onRefresh();
+      const msgC = editClaimId
+        ? `Siniestro editado: ${claimForm.descripcion?.slice(0, 60)}`
+        : `Siniestro registrado: ${claimForm.descripcion?.slice(0, 60)}`;
+      await api.addActivity(client.id, msgC);
       setShowClaimForm(false); setEditClaimId(null); setClaimForm(emptyClaim);
       showToast(editClaimId ? "Siniestro actualizado ✓" : "Siniestro registrado ✓");
     } catch (e) { showToast(e.message || "Error"); }
@@ -101,8 +194,21 @@ export default function ClientDetail({ client, policies, claims, onRefresh, curr
   };
 
   const handleDeleteClaim = async (id) => {
-    if (!window.confirm("¿Eliminar este siniestro?")) return;
-    try { await api.deleteClaim(id); await onRefresh(); showToast("Siniestro eliminado"); }
+    const cl = claims.find(c => c.id === id);
+    setConfirmModal({
+      title: "Eliminar siniestro",
+      message: "Se eliminará este siniestro permanentemente.",
+      detail: [{ icon: "⚠️", label: "Siniestro", value: cl?.descripcion?.slice(0, 60) || id }],
+      onConfirm: async () => { setConfirmModal(null); await _doDeleteClaim(id); }
+    });
+  };
+
+  const _doDeleteClaim = async (id) => {
+    try {
+      const cl = claims.find(c => c.id === id);
+      await api.deleteClaim(id);
+      if (cl) await api.addActivity(client.id, `Siniestro eliminado: ${cl.descripcion?.slice(0, 60)}`);
+      await onRefresh(); showToast("Siniestro eliminado"); }
     catch (e) { showToast(e.message || "Error"); }
   };
 
@@ -158,6 +264,17 @@ export default function ClientDetail({ client, policies, claims, onRefresh, curr
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
       {toast && <div style={S.toast}>{toast}</div>}
+
+      {confirmModal && (
+        <ConfirmModal
+          title={confirmModal.title}
+          message={confirmModal.message}
+          detail={confirmModal.detail}
+          confirmLabel="Sí, eliminar"
+          onConfirm={confirmModal.onConfirm}
+          onCancel={() => setConfirmModal(null)}
+        />
+      )}
 
       {/* Volver */}
       <button onClick={onBack} style={{ background: "none", border: "none", color: "var(--goldDim)",
@@ -234,6 +351,7 @@ export default function ClientDetail({ client, policies, claims, onRefresh, curr
           { id: "siniestros",label: `Siniestros (${claims.length})` },
           { id: "historial", label: `Historial (${(client.activities || []).length})` },
           { id: "tesis",     label: `Tesis (${(client.tesis_policies || []).length + (client.tesis_claims || []).length})` },
+          { id: "documentos", label: `Documentos (${documents.length})` },
         ].map(t => (
           <button key={t.id} onClick={() => setTab(t.id)}
             style={{ ...S.chip, ...(tab === t.id ? S.chipActive : {}) }}>
@@ -349,19 +467,42 @@ export default function ClientDetail({ client, policies, claims, onRefresh, curr
             <button onClick={handleAddNote} style={S.btn}>Añadir</button>
           </div>
           {(client.activities || []).length === 0 && <div style={S.empty}>Sin historial</div>}
-          {[...(client.activities || [])].reverse().map((a, i) => (
-            <div key={a.id || i} style={{ background: "var(--card)", border: "0.5px solid var(--border)",
-              borderRadius: 8, padding: "12px 16px", display: "flex", gap: 12 }}>
-              <div style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--gold)",
-                flexShrink: 0, marginTop: 6 }} />
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 15, color: "var(--text)", fontFamily: "Plus Jakarta Sans, sans-serif" }}>{a.note}</div>
-                <div style={{ fontSize: 10, color: "var(--mute)", fontFamily: "Plus Jakarta Sans, sans-serif", marginTop: 4 }}>
-                  {a.user} · {new Date(a.date).toLocaleDateString("es-ES")}
+          <div style={{ display: "flex", flexDirection: "column", gap: 0, position: "relative" }}>
+            {[...(client.activities || [])].reverse().map((a, i, arr) => {
+              const note = a.note || "";
+              let icon = "💬"; let color = "var(--gold)";
+              if (note.startsWith("Póliza añadida"))   { icon = "📋"; color = "#27ae60"; }
+              else if (note.startsWith("Póliza editada"))   { icon = "✏️"; color = "#C9A870"; }
+              else if (note.startsWith("Póliza eliminada")) { icon = "🗑"; color = "#8B3A3A"; }
+              else if (note.startsWith("Siniestro registrado")) { icon = "⚠️"; color = "#E08080"; }
+              else if (note.startsWith("Siniestro editado"))    { icon = "✏️"; color = "#C9A870"; }
+              else if (note.startsWith("Siniestro eliminado"))  { icon = "🗑"; color = "#8B3A3A"; }
+              else if (note.startsWith("Documento subido"))     { icon = "📎"; color = "#5B8DB8"; }
+              else if (note.startsWith("Documento eliminado"))  { icon = "🗑"; color = "#8B3A3A"; }
+              const isLast = i === arr.length - 1;
+              return (
+                <div key={a.id || i} style={{ display: "flex", gap: 14, position: "relative" }}>
+                  {/* Línea vertical */}
+                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", flexShrink: 0 }}>
+                    <div style={{ width: 32, height: 32, borderRadius: "50%", background: "var(--lift)",
+                      border: `1.5px solid ${color}`, display: "flex", alignItems: "center",
+                      justifyContent: "center", fontSize: 14, flexShrink: 0, zIndex: 1 }}>
+                      {icon}
+                    </div>
+                    {!isLast && <div style={{ width: 1.5, flex: 1, minHeight: 16, background: "var(--border)", margin: "2px 0" }} />}
+                  </div>
+                  {/* Contenido */}
+                  <div style={{ flex: 1, paddingBottom: isLast ? 0 : 16, paddingTop: 4 }}>
+                    <div style={{ fontSize: 13, color: "var(--text)", fontFamily: "Plus Jakarta Sans, sans-serif",
+                      fontWeight: 500, lineHeight: 1.4 }}>{note}</div>
+                    <div style={{ fontSize: 11, color: "var(--mute)", fontFamily: "Plus Jakarta Sans, sans-serif", marginTop: 4 }}>
+                      {a.user} · {new Date(a.date).toLocaleDateString("es-ES", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
-          ))}
+              );
+            })}
+          </div>
         </div>
       )}
 
@@ -444,6 +585,75 @@ export default function ClientDetail({ client, policies, claims, onRefresh, curr
               ))
             }
           </div>
+        </div>
+      )}
+
+      {/* TAB: Documentos */}
+      {tab === "documentos" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          {/* Zona subida */}
+          <div style={{ background: "var(--card)", border: "0.5px solid var(--border)", borderRadius: 8, padding: 20 }}>
+            <div style={{ fontSize: 11, letterSpacing: "0.15em", color: "var(--gold)", textTransform: "uppercase",
+              fontFamily: "Plus Jakarta Sans, sans-serif", marginBottom: 14 }}>Subir documento</div>
+            <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+              <input
+                value={uploadDesc}
+                onChange={e => setUploadDesc(e.target.value)}
+                placeholder="Descripción (opcional)"
+                style={{ ...S.input, flex: 1, minWidth: 180 }}
+              />
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".pdf,.jpg,.jpeg,.png,.webp,.doc,.docx"
+                onChange={handleUpload}
+                style={{ display: "none" }}
+              />
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                disabled={saving}
+                style={{ ...S.btn, opacity: saving ? 0.7 : 1 }}>
+                {saving ? "Subiendo..." : "📎 Seleccionar fichero"}
+              </button>
+            </div>
+            <div style={{ fontSize: 11, color: "var(--mute)", fontFamily: "Plus Jakarta Sans, sans-serif", marginTop: 8 }}>
+              PDF, imágenes o Word · Máximo 10MB
+            </div>
+          </div>
+
+          {/* Lista documentos */}
+          {docsLoading && <div style={S.empty}>Cargando documentos...</div>}
+          {!docsLoading && documents.length === 0 && (
+            <div style={S.empty}>Sin documentos adjuntos</div>
+          )}
+          {!docsLoading && documents.map(doc => (
+            <div key={doc.id} style={{ background: "var(--card)", border: "0.5px solid var(--border)",
+              borderRadius: 8, padding: "14px 16px", display: "flex", alignItems: "center", gap: 14 }}>
+              <span style={{ fontSize: 24, flexShrink: 0 }}>{fileIcon(doc.content_type)}</span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 14, color: "var(--text)", fontFamily: "Plus Jakarta Sans, sans-serif",
+                  fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {doc.original_name}
+                </div>
+                <div style={{ fontSize: 11, color: "var(--mute)", fontFamily: "Plus Jakarta Sans, sans-serif", marginTop: 3 }}>
+                  {doc.description && <span style={{ marginRight: 10 }}>{doc.description}</span>}
+                  {formatSize(doc.size)} · {new Date(doc.created_at).toLocaleDateString("es-ES")} · {doc.uploaded_by_name}
+                </div>
+              </div>
+              <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+                <button
+                  onClick={() => handleDownload(doc.id, doc.original_name)}
+                  style={{ ...S.iconBtn, color: "var(--gold)" }} title="Descargar">
+                  <Icon d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3" size={16} />
+                </button>
+                <button
+                  onClick={() => handleDeleteDoc(doc.id)}
+                  style={{ ...S.iconBtn, color: "#8B3A3A" }} title="Eliminar">
+                  <Icon d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" size={14} />
+                </button>
+              </div>
+            </div>
+          ))}
         </div>
       )}
 

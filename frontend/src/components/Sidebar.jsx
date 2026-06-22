@@ -23,10 +23,11 @@ const NAV = [
   { id: "pipeline",   label: "Estado de pólizas",     icon: "M22 12h-4l-3 9L9 3l-3 9H2" },
   { id: "activities", label: "Renovaciones", icon: "M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2z" },
   { id: "claims",     label: "Siniestros",   icon: "M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" },
+  { id: "tasks",      label: "Tareas",         icon: "M9 11l3 3L22 4M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" },
   { id: "reports",    label: "Informe diario", icon: "M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5.586a1 1 0 0 1 .707.293l5.414 5.414a1 1 0 0 1 .293.707V19a2 2 0 0 1-2 2z" },
 ];
 
-export default function Sidebar({ currentUser, view, setView, onLogout, theme, onToggleTheme, sidebarOpen, setSidebarOpen, isMobile }) {
+export default function Sidebar({ currentUser, view, setView, onLogout, theme, onToggleTheme, sidebarOpen, setSidebarOpen, isMobile, policies, clients, onNavigate }) {
   const T = theme === "dark" ? DARK : LIGHT;
 
   return (
@@ -42,14 +43,16 @@ export default function Sidebar({ currentUser, view, setView, onLogout, theme, o
       backdropFilter: "none", WebkitBackdropFilter: "none", isolation: "isolate",
     }}>
       {/* Logo */}
-      <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "16px 16px 4px" }}>
-        <LogoMark gold={T.gold} />
-        <div>
-          <div style={{ fontFamily: "Plus Jakarta Sans, sans-serif", fontSize: 17, fontWeight: 700, letterSpacing: "0.08em" }}>
-            <span style={{ color: T.text }}>OBJ</span><span style={{ color: T.gold }}>CRM</span>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "16px 16px 4px", justifyContent: "space-between" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <LogoMark gold={T.gold} />
+          <div>
+            <div style={{ fontFamily: "Plus Jakarta Sans, sans-serif", fontSize: 17, fontWeight: 700, letterSpacing: "0.08em" }}>
+              <span style={{ color: T.text }}>OBJ</span><span style={{ color: T.gold }}>CRM</span>
+            </div>
+            <div style={{ fontFamily: "Plus Jakarta Sans, sans-serif", fontSize: 10, letterSpacing: "0.15em",
+              color: T.mute, marginTop: 3, textTransform: "uppercase" }}>Gestión de Clientes</div>
           </div>
-          <div style={{ fontFamily: "Plus Jakarta Sans, sans-serif", fontSize: 10, letterSpacing: "0.15em",
-            color: T.mute, marginTop: 3, textTransform: "uppercase" }}>Gestión de Clientes</div>
         </div>
       </div>
 

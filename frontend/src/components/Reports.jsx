@@ -1,7 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { api } from "../api";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-import * as XLSX from "xlsx";
+import ExcelJS from "exceljs";
+import { saveAs } from "file-saver";
 
 const Icon = ({ d, size = 16 }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
@@ -11,187 +13,191 @@ const Icon = ({ d, size = 16 }) => (
 );
 
 export default function Reports({ clients, policies, claims }) {
+  const [tasks, setTasks]           = useState([]);
   const [generating, setGenerating] = useState(false);
-  const [toast, setToast] = useState("");
+  const [toast, setToast]           = useState("");
+  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split("T")[0]);
+
+  useEffect(() => { api.getTasks().then(setTasks).catch(() => {}); }, []);
 
   const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(""), 3000); };
 
-  const today     = new Date().toISOString().split("T")[0];
-  const todayFmt  = new Date().toLocaleDateString("es-ES", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
+  const today    = new Date().toISOString().split("T")[0];
+  const fecha    = selectedDate;
+  const fechaFmt = new Date(fecha + "T12:00:00").toLocaleDateString("es-ES", {
+    weekday: "long", year: "numeric", month: "long", day: "numeric"
+  });
+  const esHoy = fecha === today;
+
   const getClient = (id) => clients.find(c => c.id === id);
 
-  // Datos del informe
-  const gestionesHoy = clients.flatMap(c =>
+  // Gestiones del día seleccionado
+  const gestiones = clients.flatMap(c =>
     (c.activities || [])
-      .filter(a => a.date?.startsWith(today))
-      .map(a => ({ cliente: c.name, gestion: a.note, usuario: a.user, hora: new Date(a.date).toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" }) }))
+      .filter(a => a.date?.startsWith(fecha))
+      .map(a => ({
+        cliente: c.name,
+        gestion: a.note,
+        usuario: a.user,
+        hora: new Date(a.date).toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" }),
+      }))
   );
 
-  const renovacionesHoy = policies.filter(p =>
-    p.fecha_renovacion && p.fecha_renovacion <= today &&
+  // Renovaciones pendientes a la fecha seleccionada
+  const renovaciones = policies.filter(p =>
+    p.fecha_renovacion && p.fecha_renovacion <= fecha &&
     p.estado_tramite !== "Emitido" && p.estado_tramite !== "Anulado"
   ).map(p => ({
     cliente: getClient(p.client_id)?.name || "—",
-    ramo: p.ramo,
-    aseguradora: p.aseguradora,
-    poliza: p.num_poliza || "—",
-    renovacion: p.fecha_renovacion,
+    ramo: p.ramo, aseguradora: p.aseguradora,
+    poliza: p.num_poliza || "—", renovacion: p.fecha_renovacion,
     estado: p.estado_tramite,
     prima: p.prima_anual ? `${p.prima_anual.toLocaleString("es-ES")} €` : "—",
   }));
 
+  // Siniestros abiertos
   const siniestrosAbiertos = claims.filter(c => c.estado !== "Cerrado").map(c => ({
     cliente: getClient(c.client_id)?.name || "—",
-    expediente: c.num_expediente || "—",
-    ramo: c.ramo,
-    aseguradora: c.aseguradora,
-    fecha: c.fecha_siniestro || "—",
-    descripcion: c.descripcion,
-    estado: c.estado,
+    expediente: c.num_expediente || "—", ramo: c.ramo,
+    aseguradora: c.aseguradora, fecha: c.fecha_siniestro || "—",
+    descripcion: c.descripcion, estado: c.estado,
   }));
+
+  // Tareas pendientes a la fecha seleccionada
+  const tareasPendientes = tasks.filter(t => t.estado === "Pendiente").map(t => ({
+    titulo: t.title, cliente: t.client_name || "—",
+    prioridad: t.priority, vencimiento: t.due_date || "—",
+    asignado: t.assigned_to || "—", descripcion: t.description || "—",
+  }));
+
+  const tareasVencidas = tasks.filter(t =>
+    t.estado === "Pendiente" && t.due_date && t.due_date < fecha
+  ).length;
 
   // ── PDF ───────────────────────────────────────────────────
   const generatePDF = () => {
     setGenerating(true);
     try {
-      const doc = new jsPDF();
+      const doc   = new jsPDF();
       const pageW = doc.internal.pageSize.getWidth();
 
-      // Header
       doc.setFillColor(26, 18, 8);
       doc.rect(0, 0, pageW, 40, "F");
       doc.setTextColor(201, 168, 112);
-      doc.setFontSize(20);
-      doc.setFont("helvetica", "bold");
+      doc.setFontSize(20); doc.setFont("helvetica", "bold");
       doc.text("OBJCRM", 14, 18);
-      doc.setFontSize(9);
-      doc.setFont("helvetica", "normal");
+      doc.setFontSize(9); doc.setFont("helvetica", "normal");
       doc.text("Objetiva Broker · Gestión de Clientes", 14, 26);
-      doc.setFontSize(11);
-      doc.setTextColor(232, 213, 163);
-      doc.text(`Informe diario — ${todayFmt}`, 14, 35);
+      doc.setFontSize(11); doc.setTextColor(232, 213, 163);
+      doc.text(`Informe diario — ${fechaFmt}`, 14, 35);
 
       let y = 52;
 
-      // ── Gestiones del día
-      doc.setTextColor(26, 18, 8);
-      doc.setFontSize(13);
-      doc.setFont("helvetica", "bold");
-      doc.text(`Gestiones del día (${gestionesHoy.length})`, 14, y);
-      y += 6;
+      const addSection = (label, rows, head, body) => {
+        if (y > 240) { doc.addPage(); y = 20; }
+        doc.setTextColor(26, 18, 8); doc.setFontSize(13); doc.setFont("helvetica", "bold");
+        doc.text(`${label} (${rows.length})`, 14, y); y += 6;
+        if (rows.length === 0) {
+          doc.setFontSize(10); doc.setFont("helvetica", "italic"); doc.setTextColor(120, 100, 80);
+          doc.text("Sin registros.", 14, y + 6); y += 16;
+        } else {
+          autoTable(doc, {
+            startY: y, head: [head], body,
+            styles: { fontSize: 9, cellPadding: 4 },
+            headStyles: { fillColor: [26, 18, 8], textColor: [201, 168, 112], fontStyle: "bold" },
+            alternateRowStyles: { fillColor: [245, 240, 232] },
+            margin: { left: 14, right: 14 },
+          });
+          y = doc.lastAutoTable.finalY + 12;
+        }
+      };
 
-      if (gestionesHoy.length === 0) {
-        doc.setFontSize(10); doc.setFont("helvetica", "italic");
-        doc.setTextColor(120, 100, 80);
-        doc.text("Sin gestiones registradas hoy.", 14, y + 6);
-        y += 16;
-      } else {
-        autoTable(doc, {
-          startY: y,
-          head: [["Cliente", "Gestión", "Usuario", "Hora"]],
-          body: gestionesHoy.map(g => [g.cliente, g.gestion, g.usuario, g.hora]),
-          styles: { fontSize: 9, cellPadding: 4 },
-          headStyles: { fillColor: [26, 18, 8], textColor: [201, 168, 112], fontStyle: "bold" },
-          alternateRowStyles: { fillColor: [245, 240, 232] },
-          margin: { left: 14, right: 14 },
-        });
-        y = doc.lastAutoTable.finalY + 12;
-      }
+      addSection("Gestiones del día", gestiones,
+        ["Cliente", "Gestión", "Usuario", "Hora"],
+        gestiones.map(g => [g.cliente, g.gestion, g.usuario, g.hora])
+      );
+      addSection("Renovaciones pendientes", renovaciones,
+        ["Cliente", "Ramo", "Aseguradora", "Nº Póliza", "Renovación", "Prima/año"],
+        renovaciones.map(r => [r.cliente, r.ramo, r.aseguradora, r.poliza, r.renovacion, r.prima])
+      );
+      addSection("Siniestros en curso", siniestrosAbiertos,
+        ["Cliente", "Expediente", "Ramo", "Aseguradora", "Fecha", "Estado"],
+        siniestrosAbiertos.map(s => [s.cliente, s.expediente, s.ramo, s.aseguradora, s.fecha, s.estado])
+      );
+      addSection("Tareas pendientes", tareasPendientes,
+        ["Título", "Cliente", "Prioridad", "Vencimiento", "Asignado"],
+        tareasPendientes.map(t => [t.titulo, t.cliente, t.prioridad, t.vencimiento, t.asignado])
+      );
 
-      // ── Renovaciones vencidas
-      doc.setTextColor(26, 18, 8);
-      doc.setFontSize(13);
-      doc.setFont("helvetica", "bold");
-      doc.text(`Renovaciones pendientes (${renovacionesHoy.length})`, 14, y);
-      y += 6;
-
-      if (renovacionesHoy.length === 0) {
-        doc.setFontSize(10); doc.setFont("helvetica", "italic");
-        doc.setTextColor(120, 100, 80);
-        doc.text("Sin renovaciones pendientes.", 14, y + 6);
-        y += 16;
-      } else {
-        autoTable(doc, {
-          startY: y,
-          head: [["Cliente", "Ramo", "Aseguradora", "Nº Póliza", "Renovación", "Prima/año"]],
-          body: renovacionesHoy.map(r => [r.cliente, r.ramo, r.aseguradora, r.poliza, r.renovacion, r.prima]),
-          styles: { fontSize: 9, cellPadding: 4 },
-          headStyles: { fillColor: [26, 18, 8], textColor: [201, 168, 112], fontStyle: "bold" },
-          alternateRowStyles: { fillColor: [245, 240, 232] },
-          margin: { left: 14, right: 14 },
-        });
-        y = doc.lastAutoTable.finalY + 12;
-      }
-
-      // ── Siniestros abiertos
-      doc.setTextColor(26, 18, 8);
-      doc.setFontSize(13);
-      doc.setFont("helvetica", "bold");
-      doc.text(`Siniestros en curso (${siniestrosAbiertos.length})`, 14, y);
-      y += 6;
-
-      if (siniestrosAbiertos.length === 0) {
-        doc.setFontSize(10); doc.setFont("helvetica", "italic");
-        doc.setTextColor(120, 100, 80);
-        doc.text("Sin siniestros abiertos.", 14, y + 6);
-      } else {
-        autoTable(doc, {
-          startY: y,
-          head: [["Cliente", "Expediente", "Ramo", "Aseguradora", "Fecha", "Estado"]],
-          body: siniestrosAbiertos.map(s => [s.cliente, s.expediente, s.ramo, s.aseguradora, s.fecha, s.estado]),
-          styles: { fontSize: 9, cellPadding: 4 },
-          headStyles: { fillColor: [26, 18, 8], textColor: [201, 168, 112], fontStyle: "bold" },
-          alternateRowStyles: { fillColor: [245, 240, 232] },
-          margin: { left: 14, right: 14 },
-        });
-      }
-
-      // Footer
       const pageCount = doc.internal.getNumberOfPages();
       for (let i = 1; i <= pageCount; i++) {
         doc.setPage(i);
-        doc.setFontSize(8);
-        doc.setTextColor(150, 130, 100);
-        doc.text(`Objetiva Broker · OBJCRM · Página ${i} de ${pageCount}`, pageW / 2, doc.internal.pageSize.getHeight() - 8, { align: "center" });
+        doc.setFontSize(8); doc.setTextColor(150, 130, 100);
+        doc.text(`Objetiva Broker · OBJCRM · Página ${i} de ${pageCount}`,
+          pageW / 2, doc.internal.pageSize.getHeight() - 8, { align: "center" });
       }
-
-      doc.save(`informe_diario_${today}.pdf`);
+      doc.save(`informe_diario_${fecha}.pdf`);
       showToast("PDF descargado ✓");
     } catch (e) { showToast("Error generando PDF"); console.error(e); }
     setGenerating(false);
   };
 
   // ── EXCEL ─────────────────────────────────────────────────
-  const generateExcel = () => {
+  const generateExcel = async () => {
     setGenerating(true);
     try {
-      const wb = XLSX.utils.book_new();
+      const wb = new ExcelJS.Workbook();
+      wb.creator = "OBJCRM";
 
-      // Hoja 1: Gestiones
-      const wsGestiones = XLSX.utils.json_to_sheet(
-        gestionesHoy.length > 0 ? gestionesHoy :
-        [{ cliente: "Sin gestiones registradas hoy", gestion: "", usuario: "", hora: "" }]
+      const headStyle = {
+        font: { bold: true, color: { argb: "FFC9A870" } },
+        fill: { type: "pattern", pattern: "solid", fgColor: { argb: "FF1A1208" } },
+        alignment: { vertical: "middle" },
+      };
+
+      const addSheet = (name, columns, rows) => {
+        const ws = wb.addWorksheet(name);
+        ws.columns = columns.map((c, i) => ({
+          header: c, key: String(i),
+          width: Math.max(c.length, ...rows.map(r => String(r[i] ?? "").length)) + 2,
+        }));
+        Object.assign(ws.getRow(1), headStyle);
+        ws.getRow(1).commit();
+        rows.forEach(r => ws.addRow(r));
+      };
+
+      const empty = (msg) => [[msg, "", "", "", ""]];
+
+      addSheet("Gestiones del día",
+        ["Cliente", "Gestión", "Usuario", "Hora"],
+        gestiones.length > 0
+          ? gestiones.map(g => [g.cliente, g.gestion, g.usuario, g.hora])
+          : empty(`Sin gestiones registradas el ${fecha}`)
       );
-      wsGestiones["!cols"] = [{ wch: 25 }, { wch: 50 }, { wch: 20 }, { wch: 10 }];
-      XLSX.utils.book_append_sheet(wb, wsGestiones, "Gestiones del día");
-
-      // Hoja 2: Renovaciones
-      const wsRenov = XLSX.utils.json_to_sheet(
-        renovacionesHoy.length > 0 ? renovacionesHoy :
-        [{ cliente: "Sin renovaciones pendientes", ramo: "", aseguradora: "", poliza: "", renovacion: "", estado: "", prima: "" }]
+      addSheet("Renovaciones",
+        ["Cliente", "Ramo", "Aseguradora", "Nº Póliza", "Renovación", "Estado", "Prima/año"],
+        renovaciones.length > 0
+          ? renovaciones.map(r => [r.cliente, r.ramo, r.aseguradora, r.poliza, r.renovacion, r.estado, r.prima])
+          : empty("Sin renovaciones pendientes")
       );
-      wsRenov["!cols"] = [{ wch: 25 }, { wch: 15 }, { wch: 20 }, { wch: 18 }, { wch: 14 }, { wch: 16 }, { wch: 12 }];
-      XLSX.utils.book_append_sheet(wb, wsRenov, "Renovaciones");
-
-      // Hoja 3: Siniestros
-      const wsSin = XLSX.utils.json_to_sheet(
-        siniestrosAbiertos.length > 0 ? siniestrosAbiertos :
-        [{ cliente: "Sin siniestros abiertos", expediente: "", ramo: "", aseguradora: "", fecha: "", descripcion: "", estado: "" }]
+      addSheet("Siniestros",
+        ["Cliente", "Expediente", "Ramo", "Aseguradora", "Fecha", "Descripción", "Estado"],
+        siniestrosAbiertos.length > 0
+          ? siniestrosAbiertos.map(s => [s.cliente, s.expediente, s.ramo, s.aseguradora, s.fecha, s.descripcion, s.estado])
+          : empty("Sin siniestros abiertos")
       );
-      wsSin["!cols"] = [{ wch: 25 }, { wch: 18 }, { wch: 15 }, { wch: 18 }, { wch: 14 }, { wch: 40 }, { wch: 14 }];
-      XLSX.utils.book_append_sheet(wb, wsSin, "Siniestros");
+      addSheet("Tareas pendientes",
+        ["Título", "Cliente", "Prioridad", "Vencimiento", "Asignado", "Descripción"],
+        tareasPendientes.length > 0
+          ? tareasPendientes.map(t => [t.titulo, t.cliente, t.prioridad, t.vencimiento, t.asignado, t.descripcion])
+          : empty("Sin tareas pendientes")
+      );
 
-      XLSX.writeFile(wb, `informe_diario_${today}.xlsx`);
+      const buffer = await wb.xlsx.writeBuffer();
+      saveAs(
+        new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }),
+        `informe_diario_${fecha}.xlsx`
+      );
       showToast("Excel descargado ✓");
     } catch (e) { showToast("Error generando Excel"); console.error(e); }
     setGenerating(false);
@@ -206,32 +212,58 @@ export default function Reports({ clients, policies, claims }) {
         <h1 style={S.title}>Informe Diario</h1>
       </div>
 
-      {/* Fecha y botones */}
+      {/* Selector de fecha + botones */}
       <div style={{ background: "var(--card)", border: "0.5px solid var(--border)", borderRadius: 8, padding: "20px 24px" }}>
-        <div style={{ fontFamily: "Plus Jakarta Sans, sans-serif", fontSize: 13, color: "var(--mute)", marginBottom: 6, textTransform: "capitalize" }}>
-          {todayFmt}
+        <div style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap", marginBottom: 16 }}>
+          <div>
+            <div style={{ fontSize: 10, letterSpacing: "0.15em", color: "var(--mute)", textTransform: "uppercase",
+              fontFamily: "Plus Jakarta Sans, sans-serif", marginBottom: 6 }}>Fecha del informe</div>
+            <input
+              type="date"
+              value={selectedDate}
+              max={today}
+              onChange={e => setSelectedDate(e.target.value)}
+              style={{ background: "var(--lift)", border: "0.5px solid var(--border)", color: "var(--text)",
+                padding: "9px 14px", borderRadius: 6, fontFamily: "Plus Jakarta Sans, sans-serif",
+                fontSize: 14, outline: "none", cursor: "pointer" }}
+            />
+          </div>
+          <div style={{ paddingTop: 20 }}>
+            <div style={{ fontFamily: "Plus Jakarta Sans, sans-serif", fontSize: 14, color: "var(--gold)",
+              fontWeight: 600, textTransform: "capitalize" }}>
+              {fechaFmt}
+              {esHoy && <span style={{ marginLeft: 8, fontSize: 11, color: "var(--mute)",
+                fontWeight: 400, textTransform: "uppercase", letterSpacing: "0.1em" }}>— Hoy</span>}
+            </div>
+          </div>
         </div>
-        <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginTop: 16 }}>
-          <button onClick={generatePDF} disabled={generating} style={{ ...S.btn, background: "#8B3A3A", borderColor: "#8B3A3A" }}>
+
+        <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+          <button onClick={generatePDF} disabled={generating}
+            style={{ ...S.btn, background: "#8B3A3A", opacity: generating ? 0.7 : 1 }}>
             <Icon d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z M14 2v6h6 M16 13H8 M16 17H8 M10 9H8" size={16} />
-            Descargar PDF
+            {generating ? "Generando..." : "Descargar PDF"}
           </button>
-          <button onClick={generateExcel} disabled={generating} style={{ ...S.btn, background: "#2A6B3A", borderColor: "#2A6B3A" }}>
+          <button onClick={generateExcel} disabled={generating}
+            style={{ ...S.btn, background: "#2A6B3A", opacity: generating ? 0.7 : 1 }}>
             <Icon d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z M14 2v6h6 M8 13h2m4 0h2 M8 17h2m4 0h2" size={16} />
-            Descargar Excel
+            {generating ? "Generando..." : "Descargar Excel"}
           </button>
         </div>
       </div>
 
-      {/* Resumen del día */}
+      {/* KPIs */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 12 }}>
         {[
-          { label: "Gestiones hoy",          value: gestionesHoy.length,       color: "var(--gold)" },
-          { label: "Renovaciones pendientes", value: renovacionesHoy.length,    color: "#E08080" },
-          { label: "Siniestros en curso",     value: siniestrosAbiertos.length, color: "#C9A870" },
+          { label: esHoy ? "Gestiones hoy" : "Gestiones del día", value: gestiones.length,          color: "var(--gold)" },
+          { label: "Renovaciones pendientes",                       value: renovaciones.length,       color: "#E08080" },
+          { label: "Siniestros en curso",                           value: siniestrosAbiertos.length, color: "#C9A870" },
+          { label: "Tareas pendientes",                             value: tareasPendientes.length,   color: "var(--gold)" },
+          { label: "Tareas vencidas",                               value: tareasVencidas,            color: "#E08080" },
         ].map(k => (
           <div key={k.label} style={{ background: "var(--card)", border: "0.5px solid var(--border)", borderRadius: 8, padding: "16px 18px" }}>
-            <div style={{ fontSize: 13, letterSpacing: "0.12em", color: "var(--mute)", textTransform: "uppercase", fontFamily: "Plus Jakarta Sans, sans-serif", marginBottom: 8 }}>{k.label}</div>
+            <div style={{ fontSize: 13, letterSpacing: "0.12em", color: "var(--mute)", textTransform: "uppercase",
+              fontFamily: "Plus Jakarta Sans, sans-serif", marginBottom: 8 }}>{k.label}</div>
             <div style={{ fontSize: 28, fontWeight: 700, color: k.color, fontFamily: "Plus Jakarta Sans, sans-serif" }}>{k.value}</div>
           </div>
         ))}
@@ -239,12 +271,13 @@ export default function Reports({ clients, policies, claims }) {
 
       {/* Preview gestiones */}
       <div style={{ background: "var(--card)", border: "0.5px solid var(--border)", borderRadius: 8, padding: 20 }}>
-        <div style={{ fontSize: 13, letterSpacing: "0.12em", color: "var(--mute)", textTransform: "uppercase", fontFamily: "Plus Jakarta Sans, sans-serif", marginBottom: 14 }}>
-          Gestiones registradas hoy
+        <div style={{ fontSize: 13, letterSpacing: "0.12em", color: "var(--mute)", textTransform: "uppercase",
+          fontFamily: "Plus Jakarta Sans, sans-serif", marginBottom: 14 }}>
+          Gestiones registradas — {fecha}
         </div>
-        {gestionesHoy.length === 0
-          ? <div style={S.empty}>Sin gestiones registradas hoy</div>
-          : gestionesHoy.map((g, i) => (
+        {gestiones.length === 0
+          ? <div style={S.empty}>Sin gestiones registradas este día</div>
+          : gestiones.map((g, i) => (
             <div key={i} style={{ display: "flex", gap: 12, padding: "10px 0", borderBottom: "0.5px solid var(--border)" }}>
               <div style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--gold)", flexShrink: 0, marginTop: 6 }} />
               <div style={{ flex: 1 }}>
@@ -261,53 +294,23 @@ export default function Reports({ clients, policies, claims }) {
 
       {/* Preview renovaciones */}
       <div style={{ background: "var(--card)", border: "0.5px solid var(--border)", borderRadius: 8, padding: 20 }}>
-        <div style={{ fontSize: 13, letterSpacing: "0.12em", color: "var(--mute)", textTransform: "uppercase", fontFamily: "Plus Jakarta Sans, sans-serif", marginBottom: 14 }}>
-          Renovaciones pendientes
+        <div style={{ fontSize: 13, letterSpacing: "0.12em", color: "var(--mute)", textTransform: "uppercase",
+          fontFamily: "Plus Jakarta Sans, sans-serif", marginBottom: 14 }}>
+          Renovaciones pendientes a {fecha}
         </div>
-        {renovacionesHoy.length === 0
+        {renovaciones.length === 0
           ? <div style={S.empty}>✓ Sin renovaciones pendientes</div>
-          : renovacionesHoy.map((r, i) => (
+          : renovaciones.map((r, i) => (
             <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center",
               padding: "10px 0", borderBottom: "0.5px solid var(--border)", flexWrap: "wrap", gap: 8 }}>
               <div>
                 <div style={{ fontSize: 15, fontWeight: 600, color: "var(--text)", fontFamily: "Plus Jakarta Sans, sans-serif" }}>{r.cliente}</div>
-                <div style={{ fontSize: 14, color: "var(--mute)", fontFamily: "Plus Jakarta Sans, sans-serif", marginTop: 2 }}>
-                  {r.ramo} · {r.aseguradora} · {r.poliza}
-                </div>
+                <div style={{ fontSize: 14, color: "var(--mute)", fontFamily: "Plus Jakarta Sans, sans-serif", marginTop: 2 }}>{r.ramo} · {r.aseguradora} · {r.poliza}</div>
               </div>
               <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                 <span style={{ fontSize: 14, color: "#E08080", fontFamily: "Plus Jakarta Sans, sans-serif" }}>⚠ {r.renovacion}</span>
                 <span style={{ fontSize: 14, color: "var(--gold)", fontFamily: "Plus Jakarta Sans, sans-serif" }}>{r.prima}</span>
               </div>
-            </div>
-          ))
-        }
-      </div>
-
-      {/* Preview siniestros */}
-      <div style={{ background: "var(--card)", border: "0.5px solid var(--border)", borderRadius: 8, padding: 20 }}>
-        <div style={{ fontSize: 13, letterSpacing: "0.12em", color: "var(--mute)", textTransform: "uppercase", fontFamily: "Plus Jakarta Sans, sans-serif", marginBottom: 14 }}>
-          Siniestros en curso
-        </div>
-        {siniestrosAbiertos.length === 0
-          ? <div style={S.empty}>✓ Sin siniestros abiertos</div>
-          : siniestrosAbiertos.map((s, i) => (
-            <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center",
-              padding: "10px 0", borderBottom: "0.5px solid var(--border)", flexWrap: "wrap", gap: 8 }}>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 15, fontWeight: 600, color: "var(--text)", fontFamily: "Plus Jakarta Sans, sans-serif" }}>{s.cliente}</div>
-                <div style={{ fontSize: 14, color: "var(--mute)", fontFamily: "Plus Jakarta Sans, sans-serif", marginTop: 2,
-                  overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                  {s.descripcion}
-                </div>
-                <div style={{ fontSize: 13, color: "var(--mute)", fontFamily: "Plus Jakarta Sans, sans-serif", marginTop: 2 }}>
-                  {s.ramo} · {s.aseguradora} · Exp: {s.expediente}
-                </div>
-              </div>
-              <span style={{ fontSize: 13, padding: "3px 10px", borderRadius: 999, flexShrink: 0,
-                background: s.estado === "Abierto" ? "#1A0A0A" : "#1A1508",
-                color: s.estado === "Abierto" ? "#E08080" : "#C9A870",
-                fontFamily: "Plus Jakarta Sans, sans-serif" }}>{s.estado}</span>
             </div>
           ))
         }
