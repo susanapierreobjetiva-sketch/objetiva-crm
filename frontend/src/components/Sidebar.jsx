@@ -19,16 +19,22 @@ const LogoMark = ({ gold = "#C9A870" }) => (
 
 const NAV = [
   { id: "dashboard",  label: "Panel Principal",    icon: "M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" },
-  { id: "clients",    label: "Clientes",     icon: "M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z" },
-  { id: "pipeline",   label: "Estado de pólizas",     icon: "M22 12h-4l-3 9L9 3l-3 9H2" },
-  { id: "activities", label: "Renovaciones", icon: "M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2z" },
-  { id: "claims",     label: "Siniestros",   icon: "M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" },
-  { id: "tasks",      label: "Tareas",         icon: "M9 11l3 3L22 4M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" },
-  { id: "reports",    label: "Informe diario", icon: "M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5.586a1 1 0 0 1 .707.293l5.414 5.414a1 1 0 0 1 .293.707V19a2 2 0 0 1-2 2z" },
+  { id: "clients",    label: "Clientes",            icon: "M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z" },
+  { id: "pipeline",   label: "Estado de pólizas",   icon: "M22 12h-4l-3 9L9 3l-3 9H2" },
+  { id: "activities", label: "Renovaciones",        icon: "M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2z" },
+  { id: "claims",     label: "Siniestros",          icon: "M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" },
+  { id: "tasks",      label: "Tareas",              icon: "M9 11l3 3L22 4M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" },
+  { id: "reports",    label: "Informe diario",      icon: "M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5.586a1 1 0 0 1 .707.293l5.414 5.414a1 1 0 0 1 .293.707V19a2 2 0 0 1-2 2z" },
+];
+
+// todos los usuarios ven backup
+const NAV_ADMIN = [
+  { id: "backup", label: "Copia de seguridad", icon: "M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12" },
 ];
 
 export default function Sidebar({ currentUser, view, setView, onLogout, theme, onToggleTheme, sidebarOpen, setSidebarOpen, isMobile, policies, clients, onNavigate }) {
   const T = theme === "dark" ? DARK : LIGHT;
+  const allNav = [...NAV, ...NAV_ADMIN];
 
   return (
     <aside style={{
@@ -79,7 +85,7 @@ export default function Sidebar({ currentUser, view, setView, onLogout, theme, o
 
       {/* Nav */}
       <nav style={{ flex: 1, padding: "4px 0", display: "flex", flexDirection: "column" }}>
-        {NAV.map(item => (
+        {allNav.map(item => (
           <button key={item.id}
             onClick={() => { setView(item.id); if (isMobile) setSidebarOpen(false); }}
             style={{

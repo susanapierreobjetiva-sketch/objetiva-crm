@@ -229,47 +229,60 @@ export default function ClientList({ clients, policies, onRefresh, currentUser, 
             <div key={c.id} onClick={() => onSelect(c.id)}
               style={{ background: "var(--card)", border: "0.5px solid var(--border)",
                 borderRadius: 8, padding: "14px 16px", cursor: "pointer",
-                display: "flex", alignItems: "center", gap: 12, transition: "border-color 0.15s" }}
+                display: "flex", flexDirection: "column", gap: 10, transition: "border-color 0.15s" }}
               onMouseEnter={e => e.currentTarget.style.borderColor = "var(--goldDim)"}
               onMouseLeave={e => e.currentTarget.style.borderColor = "var(--border)"}>
-              <div style={{ width: 40, height: 40, borderRadius: "50%", background: "var(--lift)",
-                border: "1px solid var(--goldDim)", display: "flex", alignItems: "center",
-                justifyContent: "center", fontSize: 14, fontWeight: 700, color: "var(--gold)", flexShrink: 0 }}>
-                {c.name.charAt(0).toUpperCase()}
-              </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontFamily: "Plus Jakarta Sans, sans-serif", fontSize: 16, fontWeight: 600,
-                  color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                  {c.name}
-                  {c.empresa && <span style={{ fontSize: 14, color: "var(--mute)", marginLeft: 8 }}>· {c.empresa}</span>}
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <div style={{ width: 40, height: 40, borderRadius: "50%", background: "var(--lift)",
+                  border: "1px solid var(--goldDim)", display: "flex", alignItems: "center",
+                  justifyContent: "center", fontSize: 14, fontWeight: 700, color: "var(--gold)", flexShrink: 0 }}>
+                  {c.name.charAt(0).toUpperCase()}
                 </div>
-                <div style={{ fontSize: 14, color: "var(--textSub)", marginTop: 2,
-                  fontFamily: "Plus Jakarta Sans, sans-serif", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                  {[c.email, c.phone].filter(Boolean).join(" · ")}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontFamily: "Plus Jakarta Sans, sans-serif", fontSize: 16, fontWeight: 600,
+                    color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {c.name}
+                  </div>
+                  {c.empresa && (
+                    <div style={{ fontSize: 13, color: "var(--mute)", fontFamily: "Plus Jakarta Sans, sans-serif",
+                      overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {c.empresa}
+                    </div>
+                  )}
+                  {(c.email || c.phone) && (
+                    <div style={{ fontSize: 12, color: "var(--textSub)", marginTop: 2,
+                      fontFamily: "Plus Jakarta Sans, sans-serif", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {[c.email, c.phone].filter(Boolean).join(" · ")}
+                    </div>
+                  )}
                 </div>
+                <span style={{ fontSize: 10, padding: "3px 10px", borderRadius: 999, background: "var(--lift)",
+                  color: "var(--mute)", fontFamily: "Plus Jakarta Sans, sans-serif", letterSpacing: "0.08em",
+                  textTransform: "uppercase", flexShrink: 0 }}>{c.tipo}</span>
               </div>
-              <div style={{ textAlign: "center", flexShrink: 0 }}>
-                <div style={{ fontSize: 18, fontWeight: 700, color: "var(--gold)", fontFamily: "Plus Jakarta Sans, sans-serif" }}>{nPolizas}</div>
-                <div style={{ fontSize: 11, color: "var(--mute)", fontFamily: "Plus Jakarta Sans, sans-serif", letterSpacing: "0.08em", textTransform: "uppercase" }}>pólizas</div>
-              </div>
-              {prima > 0 && (
-                <div style={{ textAlign: "right", flexShrink: 0 }}>
-                  <div style={{ fontSize: 15, fontWeight: 600, color: "var(--gold)", fontFamily: "Plus Jakarta Sans, sans-serif" }}>{prima.toLocaleString("es-ES")} €</div>
-                  <div style={{ fontSize: 11, color: "var(--mute)", fontFamily: "Plus Jakarta Sans, sans-serif", letterSpacing: "0.08em", textTransform: "uppercase" }}>prima/año</div>
+              <div style={{ display: "flex", alignItems: "center", gap: 12, paddingTop: 8,
+                borderTop: "0.5px solid var(--border)" }} onClick={e => e.stopPropagation()}>
+                <div style={{ textAlign: "center", flexShrink: 0 }}>
+                  <div style={{ fontSize: 18, fontWeight: 700, color: "var(--gold)", fontFamily: "Plus Jakarta Sans, sans-serif" }}>{nPolizas}</div>
+                  <div style={{ fontSize: 10, color: "var(--mute)", fontFamily: "Plus Jakarta Sans, sans-serif", letterSpacing: "0.08em", textTransform: "uppercase" }}>pólizas</div>
                 </div>
-              )}
-              <span style={{ fontSize: 11, padding: "3px 10px", borderRadius: 999, background: "var(--lift)",
-                color: "var(--mute)", fontFamily: "Plus Jakarta Sans, sans-serif", letterSpacing: "0.08em",
-                textTransform: "uppercase", flexShrink: 0 }}>{c.tipo}</span>
-              <div style={{ display: "flex", gap: 4, flexShrink: 0 }} onClick={e => e.stopPropagation()}>
-                <button onClick={e => openEdit(c, e)} style={S.iconBtn} title="Editar">
-                  <Icon d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" size={14} />
-                </button>
-                {currentUser.role === "admin" && (
-                  <button onClick={e => askDelete(c, e)} style={{ ...S.iconBtn, color: "#8B3A3A" }} title="Eliminar">
-                    <Icon d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" size={14} />
-                  </button>
+                {prima > 0 && (
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 15, fontWeight: 600, color: "var(--gold)", fontFamily: "Plus Jakarta Sans, sans-serif" }}>{prima.toLocaleString("es-ES")} €</div>
+                    <div style={{ fontSize: 10, color: "var(--mute)", fontFamily: "Plus Jakarta Sans, sans-serif", letterSpacing: "0.08em", textTransform: "uppercase" }}>prima/año</div>
+                  </div>
                 )}
+                {prima === 0 && <div style={{ flex: 1 }} />}
+                <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
+                  <button onClick={e => openEdit(c, e)} style={S.iconBtn} title="Editar">
+                    <Icon d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" size={14} />
+                  </button>
+                  {currentUser.role === "admin" && (
+                    <button onClick={e => askDelete(c, e)} style={{ ...S.iconBtn, color: "#8B3A3A" }} title="Eliminar">
+                      <Icon d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" size={14} />
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           );

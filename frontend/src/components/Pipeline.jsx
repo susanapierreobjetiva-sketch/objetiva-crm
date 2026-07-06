@@ -2,6 +2,7 @@ import { useState } from "react";
 import { api } from "../api";
 import { useIsMobile } from "../useIsMobile";
 import ExportButton from "./ExportButton";
+import PolicyForm from "./PolicyForm";
 
 const STAGES = ["Nuevo", "En seguimiento", "Negociación", "Emitido", "Anulado"];
 const STAGE_COLORS = {
@@ -19,9 +20,11 @@ const STAGE_BG = {
   "Anulado":        "#1A0A0A",
 };
 
-export default function Pipeline({ policies, clients, onRefresh }) {
+export default function Pipeline({ policies, clients, onRefresh, theme }) {
   const [dragging, setDragging] = useState(null);
   const [toast, setToast]       = useState("");
+  const [showForm, setShowForm] = useState(false);
+  const [editando, setEditando] = useState(null);
   const isMobile = useIsMobile();
 
   const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(""), 2500); };
@@ -63,6 +66,15 @@ export default function Pipeline({ policies, clients, onRefresh }) {
           { label: "Estado póliza",  value: r => r.estado_poliza },
         ]}
       />
+
+      <button
+        onClick={() => { setEditando(null); setShowForm(true); }}
+        style={{ background: "var(--gold)", border: "none", color: "var(--bgApp)",
+          padding: "8px 18px", borderRadius: 6, fontSize: 12,
+          fontFamily: "Plus Jakarta Sans, sans-serif", fontWeight: 700,
+          cursor: "pointer", letterSpacing: "0.08em" }}>
+        + Nueva póliza
+      </button>
 
       <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
         {STAGES.map(stage => (
@@ -129,6 +141,20 @@ export default function Pipeline({ policies, clients, onRefresh }) {
                       <span title={`Renovación: ${p.fecha_renovacion}`} style={{ fontSize: 12 }}>⚠️</span>
                     )}
                   </div>
+                  <div style={{ display: "flex", gap: 6, marginTop: 8, justifyContent: "flex-end" }}>
+                    <button onClick={(e) => { e.stopPropagation(); setEditando(p); setShowForm(true); }}
+                      style={{ background: "none", border: "0.5px solid var(--border)", color: "var(--gold)",
+                        fontSize: 11, padding: "3px 10px", borderRadius: 4, cursor: "pointer",
+                        fontFamily: "Plus Jakarta Sans, sans-serif" }}>Editar</button>
+                    <button onClick={async (e) => { e.stopPropagation();
+                        if (window.confirm("¿Eliminar esta póliza?")) {
+                          try { await api.deletePolicy(p.id); await onRefresh(); showToast("Póliza eliminada"); }
+                          catch (err) { showToast(err.message || "Error"); }
+                        } }}
+                      style={{ background: "none", border: "0.5px solid rgba(139,58,58,0.5)", color: "#E08080",
+                        fontSize: 11, padding: "3px 10px", borderRadius: 4, cursor: "pointer",
+                        fontFamily: "Plus Jakarta Sans, sans-serif" }}>Eliminar</button>
+                  </div>
                 </div>
               );
             })}
@@ -145,6 +171,20 @@ export default function Pipeline({ policies, clients, onRefresh }) {
         textAlign: "center", letterSpacing: "0.08em" }}>
         Arrastra las tarjetas para cambiar de estado
       </div>
+
+      {showForm && (
+        <PolicyForm
+          policy={editando}
+          clients={clients}
+          theme={theme}
+          onClose={() => setShowForm(false)}
+          onSave={async () => {
+            setShowForm(false);
+            await onRefresh();
+            showToast(editando ? "Póliza actualizada" : "Póliza creada");
+          }}
+        />
+      )}
     </div>
   );
 }

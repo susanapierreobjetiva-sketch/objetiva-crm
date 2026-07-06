@@ -5,6 +5,7 @@ const BASE = window.location.hostname === "localhost"
 // Token SOLO en memoria — nunca en localStorage
 // El refresh cookie (HttpOnly) lo restaura tras recargar
 let token = null;
+export const getToken = () => token;
 
 const request = async (method, path, body, isRetry = false) => {
   const res = await fetch(`${BASE}${path}`, {
@@ -107,6 +108,9 @@ export const api = {
     token = null;
   },
 
+  getEmails:      (entityType, entityId) => request("GET", `/emails?entity_type=${entityType}&entity_id=${entityId}`),
+  createEmail:    (data) => request("POST", "/emails", data),
+  deleteEmail:    (id)   => request("DELETE", `/emails/${id}`),
   getAgents: () => request("GET", "/auth/users"),
 
   // Clientes
@@ -180,4 +184,56 @@ export const api = {
   createTask:       (data)         => request("POST",   "/tasks", data),
   updateTask:       (id, data)     => request("PUT",    `/tasks/${id}`, data),
   deleteTask:       (id)           => request("DELETE", `/tasks/${id}`),
+
+// Backup
+  listBackups: () => request("GET", "/backup/list"),
+
+  deleteBackup: (filename) => request("DELETE", `/backup/${filename}`),
+
+  downloadBackup: async () => {
+    const res = await fetch(`${BASE}/backup/export`, {
+      headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      credentials: "include",
+    });
+    if (!res.ok) throw new Error("Error al generar el backup");
+    const blob = await res.blob();
+    const disposition = res.headers.get("content-disposition") || "";
+    const match = disposition.match(/filename="?([^"]+)"?/);
+    const filename = match ? match[1] : `crm_backup_${Date.now()}.json.gz`;
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = filename; a.click();
+    URL.revokeObjectURL(url);
+  },
+
+  restoreBackup: async (file) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    const res = await fetch(`${BASE}/backup/restore`, {
+      method: "POST",
+      headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      credentials: "include",
+      body: formData,
+    });
+    if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.detail || "Error restauración"); }
+    return res.json();
+  },
+
+addGestionLibre: (cliente, note, tipo) =>
+    request("POST", "/clients/gestiones-libres", { cliente, note, tipo }),
+
+  deleteGestionLibre: (id) =>
+    request("DELETE", `/clients/gestiones-libres/${id}`),
+
+  updateGestionLibre: (id, estado) =>
+    request("PATCH", `/clients/gestiones-libres/${id}`, { estado }),
+
+  updateActivity: (clientId, actId, estado) =>
+    request("PATCH", `/clients/${clientId}/activity/${actId}`, { estado }),
+
+  getGestionesLibres: (fecha) =>
+    request("GET", `/clients/gestiones-libres?fecha=${fecha}`),
+
+
+
 };

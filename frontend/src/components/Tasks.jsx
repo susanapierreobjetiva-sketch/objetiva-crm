@@ -3,6 +3,8 @@ import { api } from "../api";
 import ConfirmModal from "./ConfirmModal";
 
 const PRIORITY_COLORS = { "Alta": "#E08080", "Normal": "#C9A870", "Baja": "#7A9E7E" };
+const ESTADO_COLORS   = { "Pendiente": "var(--gold)", "Completada": "#27ae60", "Cancelada": "#E08080" };
+const ESTADOS_GESTION = ["Pendiente", "Completada", "Cancelada"];
 
 const Icon = ({ d, size = 16 }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
@@ -25,18 +27,18 @@ export default function Tasks({ clients, currentUser }) {
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId]     = useState(null);
   const [form, setForm]         = useState(emptyTask);
-  const [filter, setFilter]     = useState("Pendiente");
+  const [filterGestion, setFilterGestion] = useState("Todas");
   const [saving, setSaving]     = useState(false);
   const [toast, setToast]       = useState("");
   const [confirmModal, setConfirmModal] = useState(null);
 
-  // Gestiones
   const [gestionCliente, setGestionCliente] = useState("");
   const [gestionNombre, setGestionNombre]   = useState("");
   const [gestionTipo, setGestionTipo]       = useState("Llamada");
   const [gestionNota, setGestionNota]       = useState("");
   const [savingGestion, setSavingGestion]   = useState(false);
   const [gestionesHoy, setGestionesHoy]     = useState([]);
+  const [fechaGestiones, setFechaGestiones] = useState(new Date().toISOString().split("T")[0]);
 
   const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(""), 2500); };
   const set = (k, v) => setForm(d => ({ ...d, [k]: v }));
@@ -47,31 +49,50 @@ export default function Tasks({ clients, currentUser }) {
     setLoading(false);
   };
 
-  const loadGestionesHoy = async () => {
+  const loadGestionesHoy = async (fecha) => {
+    const diaActual = fecha || new Date().toISOString().split("T")[0];
     try {
-      const today = new Date().toISOString().split("T")[0];
       const allClients = await api.getClients();
-      const gestiones = allClients.flatMap(c =>
+      const gestionesClientes = allClients.flatMap(c =>
         (c.activities || [])
-          .filter(a => a.date?.startsWith(today))
-          .map(a => ({ cliente: c.name, gestion: a.note, usuario: a.user, hora: new Date(a.date).toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" }) }))
+          .filter(a => a.date?.startsWith(diaActual))
+          .map(a => ({
+            id: a.id,
+            client_id: c.id,
+            tipo: "cliente",
+            cliente: c.name,
+            gestion: a.note,
+            usuario: a.user,
+            estado: a.estado || "Pendiente",
+            hora: new Date(a.date).toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" })
+          }))
       );
-      setGestionesHoy(gestiones);
+      const gestionesLibres = await api.getGestionesLibres(diaActual);
+      const gestionesProspectos = gestionesLibres.map(g => ({
+        id: g.id,
+        tipo: "libre",
+        cliente: g.cliente + " ✦",
+        gestion: g.note,
+        usuario: g.user,
+        estado: g.estado || "Pendiente",
+        hora: new Date(g.date).toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" })
+      }));
+      setGestionesHoy([...gestionesClientes, ...gestionesProspectos]
+        .sort((a, b) => b.hora.localeCompare(a.hora)));
     } catch (e) {}
   };
 
   useEffect(() => {
     loadTasks();
-    loadGestionesHoy();
+    loadGestionesHoy(fechaGestiones);
     api.getAgents().then(setAgents).catch(() => setAgents([]));
   }, []);
 
   const today = new Date().toISOString().split("T")[0];
 
-  const filtered = tasks.filter(t => {
-    if (filter === "Todas")    return true;
-    if (filter === "Vencidas") return t.estado === "Pendiente" && t.due_date && t.due_date < today;
-    return t.estado === filter;
+  const gestionesFiltradas = gestionesHoy.filter(g => {
+    if (filterGestion === "Todas") return true;
+    return g.estado === filterGestion;
   });
 
   const vencidas    = tasks.filter(t => t.estado === "Pendiente" && t.due_date && t.due_date < today).length;
@@ -135,32 +156,46 @@ export default function Tasks({ clients, currentUser }) {
       if (gestionCliente) {
         await api.addActivity(gestionCliente, nota);
       } else {
-        // Prospecto sin ficha — guardamos en el primer cliente "sin ficha" o creamos entrada libre
-        // Como no hay cliente, lo añadimos directamente al log via un cliente genérico
-        // Por ahora lo registramos en gestionesHoy localmente con el nombre libre
-        const horaActual = new Date().toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" });
-        setGestionesHoy(prev => [{
-          cliente: nombreFinal + " ",
-          gestion: nota,
-          usuario: currentUser?.name || "—",
-          hora: horaActual,
-        }, ...prev]);
-        setGestionNota("");
-        setGestionCliente("");
-        setGestionNombre("");
-        setGestionTipo("Llamada");
-        showToast("Gestión registrada ✓");
-        setSavingGestion(false);
-        return;
+        await api.addGestionLibre(nombreFinal, nota, gestionTipo);
       }
-      setGestionNota("");
-      setGestionCliente("");
-      setGestionNombre("");
-      setGestionTipo("Llamada");
-      await loadGestionesHoy();
+      setGestionNota(""); setGestionCliente(""); setGestionNombre(""); setGestionTipo("Llamada");
+      const hoy = new Date().toISOString().split("T")[0];
+      setFechaGestiones(hoy);
+      await loadGestionesHoy(hoy);
       showToast("Gestión registrada ✓");
     } catch (e) { showToast("Error al registrar gestión"); }
     setSavingGestion(false);
+  };
+
+  const handleDeleteGestion = (g) => {
+    setConfirmModal({
+      title: "Eliminar gestión",
+      message: "Se eliminará esta gestión permanentemente.",
+      detail: [{ icon: "📋", label: "Cliente", value: g.cliente }],
+      onConfirm: async () => {
+        setConfirmModal(null);
+        try {
+          if (g.tipo === "libre") {
+            await api.deleteGestionLibre(g.id);
+          } else {
+            await api.deleteActivity(g.client_id, g.id);
+          }
+          await loadGestionesHoy(fechaGestiones);
+          showToast("Gestión eliminada");
+        } catch (e) { showToast("Error al eliminar"); }
+      }
+    });
+  };
+
+  const handleEstadoGestion = async (g, nuevoEstado) => {
+    try {
+      if (g.tipo === "libre") {
+        await api.updateGestionLibre(g.id, nuevoEstado);
+      } else {
+        await api.updateActivity(g.client_id, g.id, nuevoEstado);
+      }
+      await loadGestionesHoy(fechaGestiones);
+    } catch (e) { showToast("Error al actualizar estado"); }
   };
 
   return (
@@ -201,7 +236,7 @@ export default function Tasks({ clients, currentUser }) {
         ))}
       </div>
 
-      {/* ── Registro rápido de gestiones ── */}
+      {/* Registro rápido de gestiones */}
       <div style={{ background: "var(--card)", border: "0.5px solid var(--border)", borderRadius: 8, padding: "18px 20px" }}>
         <div style={{ fontSize: 10, letterSpacing: "0.2em", color: "var(--gold)", textTransform: "uppercase", fontFamily: "Plus Jakarta Sans, sans-serif", marginBottom: 14 }}>
           Registrar gestión
@@ -210,7 +245,7 @@ export default function Tasks({ clients, currentUser }) {
           <div>
             <label style={S.formLabel}>Cliente</label>
             <select value={gestionCliente} onChange={e => { setGestionCliente(e.target.value); setGestionNombre(""); }} style={S.input}>
-              <option value="">Cliente registrado</option>
+              <option value="">Prospecto / nombre libre</option>
               {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
           </div>
@@ -223,7 +258,7 @@ export default function Tasks({ clients, currentUser }) {
         </div>
         {!gestionCliente && (
           <div style={{ marginBottom: 10 }}>
-            <label style={S.formLabel}>Nuevo cliente</label>
+            <label style={S.formLabel}>Nombre del prospecto</label>
             <input value={gestionNombre} onChange={e => setGestionNombre(e.target.value)}
               placeholder="Nombre y apellidos..." style={S.input} />
           </div>
@@ -243,38 +278,96 @@ export default function Tasks({ clients, currentUser }) {
           </button>
         </div>
 
-        {gestionesHoy.length > 0 && (
-          <div style={{ marginTop: 16, borderTop: "0.5px solid var(--border)", paddingTop: 14 }}>
-            <div style={{ fontSize: 10, letterSpacing: "0.15em", color: "var(--mute)", textTransform: "uppercase", fontFamily: "Plus Jakarta Sans, sans-serif", marginBottom: 10 }}>
-              Gestiones de hoy ({gestionesHoy.length})
-            </div>
-            {gestionesHoy.map((g, i) => (
-              <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start",
-                padding: "8px 0", borderBottom: i < gestionesHoy.length - 1 ? "0.5px solid var(--border)" : "none", gap: 12 }}>
-                <div style={{ flex: 1 }}>
-                  <span style={{ fontSize: 13, fontWeight: 600, color: "var(--gold)", fontFamily: "Plus Jakarta Sans, sans-serif" }}>{g.cliente}</span>
-                  <span style={{ fontSize: 13, color: "var(--text)", fontFamily: "Plus Jakarta Sans, sans-serif" }}> · {g.gestion}</span>
-                </div>
-                <div style={{ fontSize: 11, color: "var(--mute)", fontFamily: "Plus Jakarta Sans, sans-serif", whiteSpace: "nowrap" }}>
-                  {g.usuario} · {g.hora}
-                </div>
-              </div>
-            ))}
+        {/* Selector de fecha + filtros + lista gestiones */}
+        <div style={{ marginTop: 16, borderTop: "0.5px solid var(--border)", paddingTop: 14 }}>
+
+          {/* Header: label + fecha + botón Hoy */}
+          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginBottom: 10 }}>
+            <span style={{ fontSize: 10, letterSpacing: "0.15em", color: "var(--mute)", textTransform: "uppercase", fontFamily: "Plus Jakarta Sans, sans-serif" }}>
+              Gestiones del día
+            </span>
+            <input
+              type="date"
+              value={fechaGestiones}
+              onChange={e => { setFechaGestiones(e.target.value); loadGestionesHoy(e.target.value); }}
+              style={{ background: "var(--lift)", border: "0.5px solid var(--border)", color: "var(--text)",
+                padding: "5px 10px", borderRadius: 6, fontFamily: "Plus Jakarta Sans, sans-serif",
+                fontSize: 12, outline: "none", width: "160px", flexShrink: 0 }}
+            />
+            {fechaGestiones !== today && (
+              <button onClick={() => { setFechaGestiones(today); loadGestionesHoy(today); }}
+                style={{ ...S.btnOutline, padding: "5px 14px", fontSize: 10 }}>
+                Hoy
+              </button>
+            )}
           </div>
-        )}
-      </div>
 
-      {/* ── Filtros tareas ── */}
-      <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-        {["Pendiente", "Vencidas", "Completada", "Todas"].map(f => (
-          <button key={f} onClick={() => setFilter(f)}
-            style={{ ...S.chip, ...(filter === f ? S.chipActive : {}) }}>{f}</button>
-        ))}
-      </div>
+          {/* Filtros de gestiones */}
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 14 }}>
+            {["Todas", "Pendiente", "Completada", "Cancelada"].map(f => {
+              const count = f === "Todas" ? gestionesHoy.length : gestionesHoy.filter(g => g.estado === f).length;
+              return (
+                <button key={f} onClick={() => setFilterGestion(f)}
+                  style={{ ...S.chipSm, ...(filterGestion === f ? S.chipSmActive : {}) }}>
+                  {f} <span style={{ opacity: 0.7, marginLeft: 3 }}>{count}</span>
+                </button>
+              );
+            })}
+          </div>
 
-      {loading && <div style={S.empty}>Cargando...</div>}
-      {!loading && filtered.length === 0 && <div style={S.empty}>Sin tareas</div>}
-      {!loading && filtered.map(task => {
+          {gestionesFiltradas.length === 0 && (
+            <div style={{ fontSize: 12, color: "var(--mute)", fontFamily: "Plus Jakarta Sans, sans-serif", padding: "8px 0" }}>
+              Sin gestiones para este filtro
+            </div>
+          )}
+
+          {gestionesFiltradas.length > 0 && (
+            <>
+              <div style={{ fontSize: 10, letterSpacing: "0.15em", color: "var(--mute)", textTransform: "uppercase", fontFamily: "Plus Jakarta Sans, sans-serif", marginBottom: 10 }}>
+                {gestionesFiltradas.length} gestión{gestionesFiltradas.length !== 1 ? "es" : ""}
+              </div>
+              {gestionesFiltradas.map((g, i) => (
+                <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center",
+                  padding: "8px 0", borderBottom: i < gestionesFiltradas.length - 1 ? "0.5px solid var(--border)" : "none", gap: 12 }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <span style={{ fontSize: 13, fontWeight: 600, color: "var(--gold)", fontFamily: "Plus Jakarta Sans, sans-serif" }}>{g.cliente}</span>
+                    <span style={{ fontSize: 13, color: "var(--text)", fontFamily: "Plus Jakarta Sans, sans-serif" }}> · {g.gestion}</span>
+                    <div style={{ fontSize: 11, color: "var(--mute)", fontFamily: "Plus Jakarta Sans, sans-serif", marginTop: 2 }}>
+                      {g.usuario} · {g.hora}
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+                    <select
+                      value={g.estado}
+                      onChange={e => handleEstadoGestion(g, e.target.value)}
+                      style={{
+                        background: "var(--lift)", border: "0.5px solid var(--border)",
+                        color: ESTADO_COLORS[g.estado] || "var(--mute)",
+                        padding: "3px 8px", borderRadius: 4, fontSize: 10,
+                        fontFamily: "Plus Jakarta Sans, sans-serif", outline: "none",
+                        fontWeight: 700, letterSpacing: "0.05em", cursor: "pointer",
+                      }}>
+                      {ESTADOS_GESTION.map(e => <option key={e} value={e}>{e}</option>)}
+                    </select>
+                    <button onClick={() => handleDeleteGestion(g)}
+                      style={{ ...S.iconBtn, color: "#8B3A3A" }} title="Eliminar gestión">
+                      <Icon d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" size={13} />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </>
+          )}
+        </div>
+
+        {/* Sección Tareas dentro de la card */}
+        <div style={{ marginTop: 16, borderTop: "0.5px solid var(--border)", paddingTop: 14 }}>
+          <div style={{ fontSize: 10, letterSpacing: "0.15em", color: "var(--mute)", textTransform: "uppercase", fontFamily: "Plus Jakarta Sans, sans-serif", marginBottom: 12 }}>
+            Tareas
+          </div>
+          {loading && <div style={{ fontSize: 12, color: "var(--mute)", fontFamily: "Plus Jakarta Sans, sans-serif" }}>Cargando...</div>}
+          {!loading && tasks.length === 0 && <div style={{ fontSize: 12, color: "var(--mute)", fontFamily: "Plus Jakarta Sans, sans-serif" }}>Sin tareas</div>}
+          {!loading && tasks.map(task => {
         const isVencida    = task.estado === "Pendiente" && task.due_date && task.due_date < today;
         const isCompletada = task.estado === "Completada";
         return (
@@ -329,6 +422,8 @@ export default function Tasks({ clients, currentUser }) {
           </div>
         );
       })}
+        </div>
+      </div>
 
       {showForm && (
         <div style={S.overlay} onClick={e => e.target === e.currentTarget && setShowForm(false)}>
@@ -356,9 +451,7 @@ export default function Tasks({ clients, currentUser }) {
                 <div>
                   <label style={S.formLabel}>Prioridad</label>
                   <select value={form.priority} onChange={e => set("priority", e.target.value)} style={S.input}>
-                    <option>Alta</option>
-                    <option>Normal</option>
-                    <option>Baja</option>
+                    <option>Alta</option><option>Normal</option><option>Baja</option>
                   </select>
                 </div>
                 <div>
@@ -370,8 +463,7 @@ export default function Tasks({ clients, currentUser }) {
                 <label style={S.formLabel}>Cliente relacionado</label>
                 <select value={form.client_id} onChange={e => {
                   const c = clients.find(x => x.id === e.target.value);
-                  set("client_id", e.target.value);
-                  set("client_name", c?.name || "");
+                  set("client_id", e.target.value); set("client_name", c?.name || "");
                 }} style={S.input}>
                   <option value="">Sin cliente</option>
                   {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -381,8 +473,7 @@ export default function Tasks({ clients, currentUser }) {
                 <label style={S.formLabel}>Asignar a</label>
                 <select value={form.assigned_to_id} onChange={e => {
                   const u = agents.find(x => x.id === e.target.value);
-                  set("assigned_to_id", e.target.value);
-                  set("assigned_to", u?.name || "");
+                  set("assigned_to_id", e.target.value); set("assigned_to", u?.name || "");
                 }} style={S.input}>
                   <option value="">Sin asignar</option>
                   {agents.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
@@ -409,6 +500,8 @@ const S = {
   iconBtn:    { background: "none", border: "none", color: "var(--mute)", cursor: "pointer", padding: 6, borderRadius: 4, display: "flex", alignItems: "center" },
   chip:       { padding: "6px 16px", borderRadius: 999, border: "0.5px solid var(--border)", background: "none", color: "var(--textSub)", cursor: "pointer", fontFamily: "Plus Jakarta Sans, sans-serif", fontSize: 10, fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase" },
   chipActive: { border: "0.5px solid var(--gold)", color: "var(--bgApp)", background: "var(--gold)", fontWeight: 700 },
+  chipSm:     { padding: "4px 12px", borderRadius: 999, border: "0.5px solid var(--border)", background: "none", color: "var(--textSub)", cursor: "pointer", fontFamily: "Plus Jakarta Sans, sans-serif", fontSize: 9, fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase" },
+  chipSmActive: { border: "0.5px solid var(--gold)", color: "var(--bgApp)", background: "var(--gold)", fontWeight: 700 },
   input:      { width: "100%", background: "var(--lift)", border: "0.5px solid var(--border)", color: "var(--text)", padding: "10px 14px", borderRadius: 6, fontFamily: "Plus Jakarta Sans, sans-serif", fontSize: 13, outline: "none", boxSizing: "border-box" },
   formLabel:  { display: "block", fontSize: 9, letterSpacing: "0.2em", color: "var(--mute)", textTransform: "uppercase", marginBottom: 6, fontFamily: "Plus Jakarta Sans, sans-serif" },
   overlay:    { position: "fixed", inset: 0, background: "rgba(0,0,0,0.8)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100 },

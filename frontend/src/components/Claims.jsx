@@ -1,5 +1,8 @@
 import ExportButton from "./ExportButton";
+import ConfirmModal from "./ConfirmModal";
 import { useState } from "react";
+import ClaimDetail from "./ClaimDetail";
+import { api } from "../api";
 
 const ESTADO_COLORS = {
   "Abierto":    { bg: "#1A0A0A", color: "#E08080" },
@@ -15,15 +18,19 @@ const Icon = ({ d, size = 16 }) => (
 );
 
 export default function Claims({ claims, clients, policies, onRefresh, currentUser }) {
-  const [filter, setFilter]         = useState("Todos");
-  const [search, setSearch]         = useState("");
-  const [filterRamo, setFilterRamo] = useState("Todos");
-  const [filterAseg, setFilterAseg] = useState("Todos");
+  const [filter, setFilter]           = useState("Todos");
+  const [search, setSearch]           = useState("");
+  const [filterRamo, setFilterRamo]   = useState("Todos");
+  const [filterAseg, setFilterAseg]   = useState("Todos");
   const [showFilters, setShowFilters] = useState(false);
+  const [confirmModal, setConfirmModal] = useState(null);
+  const [toast, setToast]             = useState("");
+  const [selectedClaim, setSelectedClaim] = useState(null);
 
+  const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(""), 2500); };
   const getClient = (clientId) => clients.find(c => c.id === clientId);
 
-  const ramos = [...new Set(claims.map(c => c.ramo).filter(Boolean))].sort();
+  const ramos        = [...new Set(claims.map(c => c.ramo).filter(Boolean))].sort();
   const aseguradoras = [...new Set(claims.map(c => c.aseguradora).filter(Boolean))].sort();
 
   const filtered = claims.filter(c => {
@@ -39,46 +46,80 @@ export default function Claims({ claims, clients, policies, onRefresh, currentUs
   });
 
   const activeFilters = (filter !== "Todos" ? 1 : 0) + (filterRamo !== "Todos" ? 1 : 0) + (filterAseg !== "Todos" ? 1 : 0);
-  const resetFilters = () => { setFilter("Todos"); setFilterRamo("Todos"); setFilterAseg("Todos"); };
+  const resetFilters  = () => { setFilter("Todos"); setFilterRamo("Todos"); setFilterAseg("Todos"); };
 
-  const abiertos   = claims.filter(c => c.estado === "Abierto").length;
-  const enGestion  = claims.filter(c => c.estado === "En gestión").length;
-  const cerrados   = claims.filter(c => c.estado === "Cerrado").length;
+  const abiertos  = claims.filter(c => c.estado === "Abierto").length;
+  const enGestion = claims.filter(c => c.estado === "En gestión").length;
+  const cerrados  = claims.filter(c => c.estado === "Cerrado").length;
+
+  const handleDeleteClaim = (c) => {
+    setConfirmModal({
+      title: "Eliminar siniestro",
+      message: "Se eliminará este siniestro permanentemente.",
+      detail: [
+        { icon: "⚠️", label: "Cliente",     value: getClient(c.client_id)?.name || "—" },
+        { icon: "📋", label: "Descripción", value: c.descripcion?.slice(0, 60) || "—" },
+      ],
+      onConfirm: async () => {
+        setConfirmModal(null);
+        try {
+          await api.deleteClaim(c.id);
+          await onRefresh();
+          showToast("Siniestro eliminado");
+        } catch (e) { showToast(e.message || "Error al eliminar"); }
+      }
+    });
+  };
+
+  if (selectedClaim) return <ClaimDetail claim={selectedClaim} client={clients.find(c => c.id === selectedClaim.client_id)} onBack={() => setSelectedClaim(null)} onRefresh={onRefresh} currentUser={currentUser} />;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+      {toast && <div style={S.toast}>{toast}</div>}
+
+      {confirmModal && (
+        <ConfirmModal
+          title={confirmModal.title}
+          message={confirmModal.message}
+          detail={confirmModal.detail}
+          confirmLabel="Sí, eliminar"
+          onConfirm={confirmModal.onConfirm}
+          onCancel={() => setConfirmModal(null)}
+        />
+      )}
+
       <div>
         <div style={S.eyebrow}>Gestión</div>
         <h1 style={S.title}>Siniestros</h1>
       </div>
 
-              <ExportButton
-            title="Siniestros"
-            filename="siniestros"
-            data={filtered || claims}
-            columns={[
-              { label: "Cliente",        value: r => { const c = clients.find(x => x.id === r.client_id); return c?.name || r.client_id; } },
-              { label: "Ramo",           value: r => r.ramo },
-              { label: "Aseguradora",    value: r => r.aseguradora },
-              { label: "Nº Expediente",  value: r => r.num_expediente },
-              { label: "Fecha",          value: r => r.fecha_siniestro },
-              { label: "Descripción",    value: r => r.descripcion },
-              { label: "Estado",         value: r => r.estado },
-              { label: "Resolución",     value: r => r.resolucion },
-            ]}
-          />
-{/* KPIs */}
+      <ExportButton
+        title="Siniestros"
+        filename="siniestros"
+        data={filtered || claims}
+        columns={[
+          { label: "Cliente",       value: r => { const c = clients.find(x => x.id === r.client_id); return c?.name || r.client_id; } },
+          { label: "Ramo",          value: r => r.ramo },
+          { label: "Aseguradora",   value: r => r.aseguradora },
+          { label: "Nº Expediente", value: r => r.num_expediente },
+          { label: "Fecha",         value: r => r.fecha_siniestro },
+          { label: "Descripción",   value: r => r.descripcion },
+          { label: "Estado",        value: r => r.estado },
+          { label: "Resolución",    value: r => r.resolucion },
+        ]}
+      />
+
+      {/* KPIs */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))", gap: 10 }}>
         {[
-          { label: "Abiertos",    value: abiertos,  color: "#E08080" },
-          { label: "En gestión",  value: enGestion, color: "#C9A870" },
-          { label: "Cerrados",    value: cerrados,  color: "#27ae60" },
-          { label: "Total",       value: claims.length, color: "var(--gold)" },
+          { label: "Abiertos",   value: abiertos,      color: "#E08080" },
+          { label: "En gestión", value: enGestion,     color: "#C9A870" },
+          { label: "Cerrados",   value: cerrados,      color: "#27ae60" },
+          { label: "Total",      value: claims.length, color: "var(--gold)" },
         ].map(k => (
-          <div key={k.label} style={{ background: "var(--card)", border: "0.5px solid var(--border)",
-            borderRadius: 8, padding: "14px 16px" }}>
-            <div style={{ fontSize: 13, letterSpacing: "0.12em", color: "var(--mute)",
-              textTransform: "uppercase", fontFamily: "Plus Jakarta Sans, sans-serif", marginBottom: 6 }}>{k.label}</div>
+          <div key={k.label} style={{ background: "var(--card)", border: "0.5px solid var(--border)", borderRadius: 8, padding: "14px 16px" }}>
+            <div style={{ fontSize: 13, letterSpacing: "0.12em", color: "var(--mute)", textTransform: "uppercase",
+              fontFamily: "Plus Jakarta Sans, sans-serif", marginBottom: 6 }}>{k.label}</div>
             <div style={{ fontSize: 28, fontWeight: 700, color: k.color, fontFamily: "Plus Jakarta Sans, sans-serif" }}>{k.value}</div>
           </div>
         ))}
@@ -88,7 +129,7 @@ export default function Claims({ claims, clients, policies, onRefresh, currentUs
       <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
         <div style={{ display: "flex", gap: 10 }}>
           <div style={{ ...S.searchWrap, flex: 1 }}>
-            <Icon d="M21 21l-6-6m2-5a7 7 0 1 1-14 0 7 7 0 0 1 14 0" size={15} stroke="var(--mute)" />
+            <Icon d="M21 21l-6-6m2-5a7 7 0 1 1-14 0 7 7 0 0 1 14 0" size={15} />
             <input value={search} onChange={e => setSearch(e.target.value)}
               placeholder="Buscar por cliente, expediente, aseguradora..." style={S.searchInput} />
           </div>
@@ -98,8 +139,7 @@ export default function Claims({ claims, clients, policies, onRefresh, currentUs
             ⚙ Filtros {activeFilters > 0 && `(${activeFilters})`}
           </button>
           {activeFilters > 0 && (
-            <button onClick={resetFilters}
-              style={{ ...S.chip, color: "#E08080", borderColor: "#8B3A3A" }}>
+            <button onClick={resetFilters} style={{ ...S.chip, color: "#E08080", borderColor: "#8B3A3A" }}>
               ✕ Limpiar
             </button>
           )}
@@ -135,28 +175,25 @@ export default function Claims({ claims, clients, policies, onRefresh, currentUs
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
         {filtered.length === 0 && <div style={S.empty}>Sin siniestros</div>}
         {filtered.map(c => {
-          const client  = getClient(c.client_id);
+          const client = getClient(c.client_id);
           const estados = ESTADO_COLORS[c.estado] || { bg: "var(--lift)", color: "var(--mute)" };
           return (
             <div key={c.id} style={{ background: "var(--card)",
               border: `0.5px solid ${c.estado === "Abierto" ? "#3A1A1A" : "var(--border)"}`,
-              borderRadius: 8, padding: "14px 16px" }}>
+              borderRadius: 8, padding: "14px 16px", cursor: "pointer" }} onClick={() => setSelectedClaim(c)}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 8 }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  {/* Cliente */}
                   <div style={{ fontSize: 14, color: "var(--gold)", fontFamily: "Plus Jakarta Sans, sans-serif",
                     fontWeight: 600, letterSpacing: "0.06em", marginBottom: 4 }}>
                     {client?.name || "Cliente desconocido"}
                   </div>
-                  {/* Descripción */}
                   <div style={{ fontSize: 16, color: "var(--text)", fontFamily: "Plus Jakarta Sans, sans-serif",
                     fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                     {c.descripcion}
                   </div>
-                  {/* Detalles */}
                   <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginTop: 6 }}>
-                    {c.ramo         && <span style={S.meta}>{c.ramo}</span>}
-                    {c.aseguradora  && <span style={S.meta}>{c.aseguradora}</span>}
+                    {c.ramo          && <span style={S.meta}>{c.ramo}</span>}
+                    {c.aseguradora   && <span style={S.meta}>{c.aseguradora}</span>}
                     {c.num_expediente && <span style={S.meta}>Exp: {c.num_expediente}</span>}
                     {c.fecha_siniestro && <span style={S.meta}>{c.fecha_siniestro}</span>}
                   </div>
@@ -166,10 +203,16 @@ export default function Claims({ claims, clients, policies, onRefresh, currentUs
                     </div>
                   )}
                 </div>
-                <span style={{ fontSize: 12, padding: "4px 12px", borderRadius: 999,
-                  background: estados.bg, color: estados.color,
-                  fontFamily: "Plus Jakarta Sans, sans-serif", letterSpacing: "0.08em",
-                  whiteSpace: "nowrap", flexShrink: 0 }}>{c.estado}</span>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+                  <span style={{ fontSize: 12, padding: "4px 12px", borderRadius: 999,
+                    background: estados.bg, color: estados.color,
+                    fontFamily: "Plus Jakarta Sans, sans-serif", letterSpacing: "0.08em",
+                    whiteSpace: "nowrap" }}>{c.estado}</span>
+                  <button onClick={() => handleDeleteClaim(c)}
+                    style={{ ...S.iconBtn, color: "#8B3A3A" }} title="Eliminar siniestro">
+                    <Icon d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" size={14} />
+                  </button>
+                </div>
               </div>
             </div>
           );
@@ -180,14 +223,16 @@ export default function Claims({ claims, clients, policies, onRefresh, currentUs
 }
 
 const S = {
-  eyebrow:    { fontSize: 13, letterSpacing: "0.2em", color: "var(--gold)", textTransform: "uppercase", marginBottom: 8, fontFamily: "Plus Jakarta Sans, sans-serif" },
-  title:      { fontSize: 40, fontWeight: 700, color: "var(--text)", margin: 0, letterSpacing: "-0.5px", fontFamily: "Plus Jakarta Sans, sans-serif" },
+  eyebrow:      { fontSize: 13, letterSpacing: "0.2em", color: "var(--gold)", textTransform: "uppercase", marginBottom: 8, fontFamily: "Plus Jakarta Sans, sans-serif" },
+  title:        { fontSize: 40, fontWeight: 700, color: "var(--text)", margin: 0, letterSpacing: "-0.5px", fontFamily: "Plus Jakarta Sans, sans-serif" },
   filterLabel:  { fontSize: 10, letterSpacing: "0.15em", color: "var(--mute)", textTransform: "uppercase", fontFamily: "Plus Jakarta Sans, sans-serif", marginBottom: 6 },
   filterSelect: { width: "100%", background: "var(--lift)", border: "0.5px solid var(--border)", color: "var(--text)", padding: "8px 12px", borderRadius: 6, fontFamily: "Plus Jakarta Sans, sans-serif", fontSize: 13, outline: "none", boxSizing: "border-box" },
-  searchWrap: { display: "flex", alignItems: "center", gap: 10, background: "var(--card)", border: "0.5px solid var(--border)", borderRadius: 8, padding: "10px 16px" },
-  searchInput:{ flex: 1, background: "none", border: "none", color: "var(--text)", fontFamily: "Plus Jakarta Sans, sans-serif", fontSize: 13, outline: "none" },
-  chip:       { padding: "5px 14px", borderRadius: 999, border: "0.5px solid var(--border)", background: "none", color: "var(--textSub)", cursor: "pointer", fontFamily: "Plus Jakarta Sans, sans-serif", fontSize: 11, fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase" },
-  chipActive: { border: "0.5px solid var(--gold)", color: "var(--bgApp)", background: "var(--gold)", fontWeight: 700 },
-  meta:       { fontSize: 14, color: "var(--mute)", fontFamily: "Plus Jakarta Sans, sans-serif" },
-  empty:      { textAlign: "center", color: "var(--mute)", fontSize: 13, fontFamily: "Plus Jakarta Sans, sans-serif", padding: "3rem", letterSpacing: "0.08em" },
+  searchWrap:   { display: "flex", alignItems: "center", gap: 10, background: "var(--card)", border: "0.5px solid var(--border)", borderRadius: 8, padding: "10px 16px" },
+  searchInput:  { flex: 1, background: "none", border: "none", color: "var(--text)", fontFamily: "Plus Jakarta Sans, sans-serif", fontSize: 13, outline: "none" },
+  chip:         { padding: "5px 14px", borderRadius: 999, border: "0.5px solid var(--border)", background: "none", color: "var(--textSub)", cursor: "pointer", fontFamily: "Plus Jakarta Sans, sans-serif", fontSize: 11, fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase" },
+  chipActive:   { border: "0.5px solid var(--gold)", color: "var(--bgApp)", background: "var(--gold)", fontWeight: 700 },
+  iconBtn:      { background: "none", border: "none", color: "var(--mute)", cursor: "pointer", padding: 6, borderRadius: 4, display: "flex", alignItems: "center" },
+  meta:         { fontSize: 14, color: "var(--mute)", fontFamily: "Plus Jakarta Sans, sans-serif" },
+  empty:        { textAlign: "center", color: "var(--mute)", fontSize: 13, fontFamily: "Plus Jakarta Sans, sans-serif", padding: "3rem", letterSpacing: "0.08em" },
+  toast:        { position: "fixed", bottom: 28, left: "50%", transform: "translateX(-50%)", background: "var(--card)", border: "1px solid var(--goldDim)", color: "var(--gold)", padding: "11px 22px", borderRadius: 6, fontSize: 12, fontFamily: "Plus Jakarta Sans, sans-serif", letterSpacing: 1.5, textTransform: "uppercase", zIndex: 200 },
 };

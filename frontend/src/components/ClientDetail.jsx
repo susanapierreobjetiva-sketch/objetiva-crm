@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import { api } from "../api";
 import ConfirmModal from "./ConfirmModal";
+import AIEmailModal from "./AIEmailModal";
+import EmailHistory from "./EmailHistory";
 
 const emptyTesisPolicy = {
   ramo: "", aseguradora: "", num_poliza: "", prima_anual: 0,
@@ -54,61 +56,122 @@ export default function ClientDetail({ client, policies, claims, onRefresh, curr
   const [tesisPolicyForm, setTesisPolicyForm] = useState(emptyTesisPolicy);
   const [tesisClaimForm, setTesisClaimForm]   = useState(emptyTesisClaim);
   const [saving, setSaving]         = useState(false);
-  const [confirmModal, setConfirmModal] = useState(null); // { action, title, message, detail }
+  const [confirmModal, setConfirmModal] = useState(null);
   const [toast, setToast]           = useState("");
+  const [showAIEmail, setShowAIEmail] = useState(false);
+
+  // Documentos normales
   const [documents, setDocuments]   = useState([]);
   const [docsLoading, setDocsLoading] = useState(false);
   const [uploadDesc, setUploadDesc] = useState("");
+  const [uploadQueue, setUploadQueue] = useState([]);
   const fileInputRef = useRef(null);
+
+  // Bóveda privada
+  const [vaultDocs, setVaultDocs]     = useState([]);
+  const [vaultLoading, setVaultLoading] = useState(false);
+  const [vaultDesc, setVaultDesc]     = useState("");
+  const [vaultQueue, setVaultQueue]   = useState([]);
+  const vaultInputRef = useRef(null);
+
+  const isAdmin = currentUser?.role === "admin";
 
   const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(""), 2500); };
 
   const loadDocuments = async () => {
     setDocsLoading(true);
-    try {
-      const docs = await api.getDocuments("client", client.id);
-      setDocuments(docs);
-    } catch (e) { console.error(e); }
+    try { setDocuments(await api.getDocuments("client", client.id)); }
+    catch (e) { console.error(e); }
     setDocsLoading(false);
   };
 
-  useEffect(() => { if (tab === "documentos") loadDocuments(); }, [tab]);
+  const loadVaultDocs = async () => {
+    if (!isAdmin) return;
+    setVaultLoading(true);
+    try { setVaultDocs(await api.getDocuments("vault_private", client.id)); }
+    catch (e) { console.error(e); }
+    setVaultLoading(false);
+  };
+
+  useEffect(() => {
+    if (tab === "documentos") {
+      loadDocuments();
+      loadVaultDocs();
+    }
+  }, [tab]);
+
+  // ── Subida múltiple genérica ───────────────────────────────
+  const handleMultiUpload = async (files, entityType, desc, onDone) => {
+    if (!files.length) return;
+    const queue = Array.from(files).map(f => ({ file: f, status: "pending", error: null }));
+    const setQueue = entityType === "client" ? setUploadQueue : setVaultQueue;
+    setQueue([...queue]);
+    setSaving(true);
+    let anyOk = false;
+
+    for (let i = 0; i < queue.length; i++) {
+      const update = (patch) => {
+        queue[i] = { ...queue[i], ...patch };
+        setQueue([...queue]);
+      };
+      update({ status: "uploading" });
+      try {
+        await api.uploadDocument(entityType, client.id, queue[i].file, desc);
+        update({ status: "done" });
+        anyOk = true;
+      } catch (err) {
+        update({ status: "error", error: err.message || "Error" });
+      }
+    }
+
+    if (anyOk) {
+      const count = queue.filter(q => q.status === "done").length;
+      await api.addActivity(client.id,
+        `${count} documento(s) subido(s)${desc ? " — " + desc : ""}`
+      );
+      await onDone();
+      await onRefresh();
+    }
+
+    setSaving(false);
+    setTimeout(() => setQueue([]), 3000);
+  };
 
   const handleUpload = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    setSaving(true);
-    try {
-      await api.uploadDocument("client", client.id, file, uploadDesc);
-      await api.addActivity(client.id, `Documento subido: ${file.name}${uploadDesc ? " — " + uploadDesc : ""}`);
-      await loadDocuments();
-      await onRefresh();
-      setUploadDesc("");
-      showToast("Documento subido ✓");
-    } catch (err) { showToast(err.message || "Error al subir"); }
-    setSaving(false);
+    const files = e.target.files;
+    if (!files?.length) return;
+    await handleMultiUpload(files, "client", uploadDesc, loadDocuments);
+    setUploadDesc("");
     e.target.value = "";
   };
 
-  const handleDeleteDoc = async (docId) => {
-    const doc = documents.find(d => d.id === docId);
+  const handleVaultUpload = async (e) => {
+    const files = e.target.files;
+    if (!files?.length) return;
+    await handleMultiUpload(files, "vault_private", vaultDesc, loadVaultDocs);
+    setVaultDesc("");
+    e.target.value = "";
+  };
+
+  // ── Eliminar documento ────────────────────────────────────
+  const handleDeleteDoc = async (docId, isVault = false) => {
+    const list = isVault ? vaultDocs : documents;
+    const doc = list.find(d => d.id === docId);
     setConfirmModal({
       title: "Eliminar documento",
       message: "Esta acción no se puede deshacer.",
       detail: [{ icon: "📎", label: "Archivo", value: doc?.original_name || docId }],
-      onConfirm: async () => { setConfirmModal(null); await _doDeleteDoc(docId); }
+      onConfirm: async () => {
+        setConfirmModal(null);
+        try {
+          await api.deleteDocument(docId);
+          if (doc) await api.addActivity(client.id, `Documento eliminado: ${doc.original_name}`);
+          if (isVault) await loadVaultDocs(); else await loadDocuments();
+          await onRefresh();
+          showToast("Documento eliminado");
+        } catch (err) { showToast(err.message || "Error"); }
+      }
     });
-  };
-
-  const _doDeleteDoc = async (docId) => {
-    try {
-      const doc = documents.find(d => d.id === docId);
-      await api.deleteDocument(docId);
-      if (doc) await api.addActivity(client.id, `Documento eliminado: ${doc.original_name}`);
-      await loadDocuments();
-      await onRefresh();
-      showToast("Documento eliminado");
-    } catch (err) { showToast(err.message || "Error"); }
   };
 
   const handleDownload = async (docId, filename) => {
@@ -131,14 +194,10 @@ export default function ClientDetail({ client, policies, claims, onRefresh, curr
 
   const setP = (k, v) => setPolicyForm(d => ({ ...d, [k]: v }));
   const setC = (k, v) => setClaimForm(d => ({ ...d, [k]: v }));
-
   const today = new Date().toISOString().split("T")[0];
-
-  // Venta cruzada — ramos que no tiene
   const ramosActivos = [...new Set(policies.filter(p => p.estado_poliza === "Activa").map(p => p.ramo))];
   const ramosFaltantes = RAMOS.filter(r => !ramosActivos.includes(r));
 
-  // Pólizas
   const handleSavePolicy = async () => {
     if (!policyForm.aseguradora) return showToast("La aseguradora es obligatoria");
     setSaving(true);
@@ -171,11 +230,10 @@ export default function ClientDetail({ client, policies, claims, onRefresh, curr
       const pol = policies.find(p => p.id === id);
       await api.deletePolicy(id);
       if (pol) await api.addActivity(client.id, `Póliza eliminada: ${pol.ramo} · ${pol.aseguradora} · Nº ${pol.num_poliza || "—"}`);
-      await onRefresh(); showToast("Póliza eliminada"); }
-    catch (e) { showToast(e.message || "Error"); }
+      await onRefresh(); showToast("Póliza eliminada");
+    } catch (e) { showToast(e.message || "Error"); }
   };
 
-  // Siniestros
   const handleSaveClaim = async () => {
     if (!claimForm.descripcion) return showToast("La descripción es obligatoria");
     setSaving(true);
@@ -208,11 +266,10 @@ export default function ClientDetail({ client, policies, claims, onRefresh, curr
       const cl = claims.find(c => c.id === id);
       await api.deleteClaim(id);
       if (cl) await api.addActivity(client.id, `Siniestro eliminado: ${cl.descripcion?.slice(0, 60)}`);
-      await onRefresh(); showToast("Siniestro eliminado"); }
-    catch (e) { showToast(e.message || "Error"); }
+      await onRefresh(); showToast("Siniestro eliminado");
+    } catch (e) { showToast(e.message || "Error"); }
   };
 
-  // Notas
   const handleAddNote = async () => {
     if (!newNote.trim()) return;
     try {
@@ -261,9 +318,96 @@ export default function ClientDetail({ client, policies, claims, onRefresh, curr
 
   const prima_total = policies.filter(p => p.estado_poliza === "Activa").reduce((s, p) => s + (p.prima_anual || 0), 0);
 
+  // ── Cola de subida visual ──────────────────────────────────
+  const UploadQueue = ({ queue }) => {
+    if (!queue.length) return null;
+    return (
+      <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 6 }}>
+        {queue.map((item, i) => (
+          <div key={i} style={{ display: "flex", alignItems: "center", gap: 10,
+            background: "var(--lift)", borderRadius: 6, padding: "8px 12px",
+            border: `0.5px solid ${item.status === "error" ? "#8B3A3A55" : item.status === "done" ? "#27ae6044" : "var(--border)"}` }}>
+            <span style={{ fontSize: 16 }}>{fileIcon(item.file.type)}</span>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 12, color: "var(--text)", fontFamily: "Plus Jakarta Sans, sans-serif",
+                overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {item.file.name}
+              </div>
+              {item.status === "error" && (
+                <div style={{ fontSize: 11, color: "#E08080", fontFamily: "Plus Jakarta Sans, sans-serif" }}>{item.error}</div>
+              )}
+            </div>
+            <span style={{ fontSize: 12, fontFamily: "Plus Jakarta Sans, sans-serif", flexShrink: 0,
+              color: item.status === "done" ? "#27ae60" : item.status === "error" ? "#E08080" : item.status === "uploading" ? "var(--gold)" : "var(--mute)" }}>
+              {item.status === "done" ? "✓ Subido" : item.status === "error" ? "✗ Error" : item.status === "uploading" ? "↑ Subiendo..." : "En cola"}
+            </span>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
+  // ── Sección docs reutilizable ──────────────────────────────
+  const DocSection = ({ docs, loading, queue, desc, onDescChange, inputRef, onSelectFiles, onDownload, onDelete, isVault = false }) => (
+    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      <div style={{ background: "var(--card)", border: `0.5px solid ${isVault ? "var(--goldDim)" : "var(--border)"}`, borderRadius: 8, padding: 20 }}>
+        <div style={{ fontSize: 11, letterSpacing: "0.15em", color: isVault ? "var(--gold)" : "var(--mute)",
+          textTransform: "uppercase", fontFamily: "Plus Jakarta Sans, sans-serif", marginBottom: 14 }}>
+          {isVault ? "🔐 Subir documento sensible" : "Subir documentos"}
+        </div>
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+          <input value={desc} onChange={e => onDescChange(e.target.value)}
+            placeholder="Descripción (opcional)"
+            style={{ ...S.input, flex: 1, minWidth: 180 }} />
+          <input ref={inputRef} type="file" multiple
+            accept=".pdf,.jpg,.jpeg,.png,.webp,.doc,.docx"
+            onChange={onSelectFiles} style={{ display: "none" }} />
+          <button onClick={() => inputRef.current?.click()} disabled={saving}
+            style={{ ...S.btn, opacity: saving ? 0.7 : 1 }}>
+            {saving ? "Subiendo..." : "📎 Seleccionar ficheros"}
+          </button>
+        </div>
+        <div style={{ fontSize: 11, color: "var(--mute)", fontFamily: "Plus Jakarta Sans, sans-serif", marginTop: 8 }}>
+          PDF, imágenes o Word · Máx. 10MB · Puedes seleccionar varios a la vez
+        </div>
+        <UploadQueue queue={queue} />
+      </div>
+
+      {loading && <div style={S.empty}>Cargando documentos...</div>}
+      {!loading && docs.length === 0 && <div style={S.empty}>Sin documentos adjuntos</div>}
+      {!loading && docs.map(doc => (
+        <div key={doc.id} style={{ background: "var(--card)", border: "0.5px solid var(--border)",
+          borderRadius: 8, padding: "14px 16px", display: "flex", alignItems: "center", gap: 14 }}>
+          <span style={{ fontSize: 24, flexShrink: 0 }}>{fileIcon(doc.content_type)}</span>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 14, color: "var(--text)", fontFamily: "Plus Jakarta Sans, sans-serif",
+              fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              {doc.original_name}
+            </div>
+            <div style={{ fontSize: 11, color: "var(--mute)", fontFamily: "Plus Jakarta Sans, sans-serif", marginTop: 3 }}>
+              {doc.description && <span style={{ marginRight: 10 }}>{doc.description}</span>}
+              {formatSize(doc.size)} · {new Date(doc.created_at).toLocaleDateString("es-ES")} · {doc.uploaded_by_name}
+            </div>
+          </div>
+          <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+            <button onClick={() => onDownload(doc.id, doc.original_name)}
+              style={{ ...S.iconBtn, color: "var(--gold)" }} title="Descargar">
+              <Icon d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3" size={16} />
+            </button>
+            <button onClick={() => onDelete(doc.id)}
+              style={{ ...S.iconBtn, color: "#8B3A3A" }} title="Eliminar">
+              <Icon d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" size={14} />
+            </button>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
       {toast && <div style={S.toast}>{toast}</div>}
+      {showAIEmail && <AIEmailModal onClose={() => setShowAIEmail(false)} entityType="client" entityId={client.id} />}
 
       {confirmModal && (
         <ConfirmModal
@@ -276,7 +420,6 @@ export default function ClientDetail({ client, policies, claims, onRefresh, curr
         />
       )}
 
-      {/* Volver */}
       <button onClick={onBack} style={{ background: "none", border: "none", color: "var(--goldDim)",
         cursor: "pointer", fontFamily: "Plus Jakarta Sans, sans-serif", fontSize: 11, letterSpacing: "0.12em",
         textTransform: "uppercase", padding: 0, display: "flex", alignItems: "center", gap: 6 }}>
@@ -305,7 +448,6 @@ export default function ClientDetail({ client, policies, claims, onRefresh, curr
               {client.address && <span style={S.meta}>📍 {client.address}</span>}
             </div>
           </div>
-          {/* KPIs rápidos */}
           <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
             <div style={{ textAlign: "center" }}>
               <div style={{ fontSize: 22, fontWeight: 700, color: "var(--gold)", fontFamily: "Plus Jakarta Sans, sans-serif" }}>{policies.length}</div>
@@ -321,6 +463,9 @@ export default function ClientDetail({ client, policies, claims, onRefresh, curr
                 <div style={{ fontSize: 9, color: "var(--mute)", fontFamily: "Plus Jakarta Sans, sans-serif", letterSpacing: "0.08em", textTransform: "uppercase" }}>prima/año</div>
               </div>
             )}
+            <div style={{ display: "flex", alignItems: "center" }}>
+              <button onClick={() => setShowAIEmail(true)} style={{ background: "var(--lift)", border: "1px solid var(--goldDim)", borderRadius: 8, color: "var(--gold)", cursor: "pointer", fontFamily: "Plus Jakarta Sans, sans-serif", fontSize: 11, fontWeight: 600, padding: "6px 14px", letterSpacing: "0.08em" }}>✨ Redactar correo</button>
+            </div>
           </div>
         </div>
       </div>
@@ -347,11 +492,12 @@ export default function ClientDetail({ client, policies, claims, onRefresh, curr
       {/* Tabs */}
       <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
         {[
-          { id: "polizas",   label: `Pólizas (${policies.length})` },
-          { id: "siniestros",label: `Siniestros (${claims.length})` },
-          { id: "historial", label: `Historial (${(client.activities || []).length})` },
-          { id: "tesis",     label: `Tesis (${(client.tesis_policies || []).length + (client.tesis_claims || []).length})` },
-          { id: "documentos", label: `Documentos (${documents.length})` },
+          { id: "polizas",    label: `Pólizas (${policies.length})` },
+          { id: "siniestros", label: `Siniestros (${claims.length})` },
+          { id: "historial",  label: `Historial (${(client.activities || []).length})` },
+          { id: "tesis",      label: `Tesis (${(client.tesis_policies || []).length + (client.tesis_claims || []).length})` },
+          { id: "correos", label: `Correos` },
+          { id: "documentos", label: `Documentos (${documents.length}${isAdmin && vaultDocs.length ? " · 🔐" + vaultDocs.length : ""})` },
         ].map(t => (
           <button key={t.id} onClick={() => setTab(t.id)}
             style={{ ...S.chip, ...(tab === t.id ? S.chipActive : {}) }}>
@@ -370,8 +516,7 @@ export default function ClientDetail({ client, policies, claims, onRefresh, curr
           </div>
           {policies.length === 0 && <div style={S.empty}>Sin pólizas registradas</div>}
           {policies.map(p => (
-            <div key={p.id} style={{ background: "var(--card)", border: "0.5px solid var(--border)",
-              borderRadius: 8, padding: "14px 16px" }}>
+            <div key={p.id} style={{ background: "var(--card)", border: "0.5px solid var(--border)", borderRadius: 8, padding: "14px 16px" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 8 }}>
                 <div>
                   <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
@@ -391,9 +536,8 @@ export default function ClientDetail({ client, policies, claims, onRefresh, curr
                   </div>
                 </div>
                 <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-                  <span style={{ fontSize: 10, padding: "3px 10px", borderRadius: 999,
-                    background: "var(--lift)", color: STAGE_COLORS[p.estado_tramite] || "var(--mute)",
-                    fontFamily: "Plus Jakarta Sans, sans-serif", letterSpacing: "0.08em" }}>{p.estado_tramite}</span>
+                  <span style={{ fontSize: 10, padding: "3px 10px", borderRadius: 999, background: "var(--lift)",
+                    color: STAGE_COLORS[p.estado_tramite] || "var(--mute)", fontFamily: "Plus Jakarta Sans, sans-serif", letterSpacing: "0.08em" }}>{p.estado_tramite}</span>
                   {p.estado_poliza && (
                     <span style={{ fontSize: 10, padding: "3px 10px", borderRadius: 999,
                       background: p.estado_poliza === "Activa" ? "#0A1A0A" : "#1A0A0A",
@@ -471,18 +615,17 @@ export default function ClientDetail({ client, policies, claims, onRefresh, curr
             {[...(client.activities || [])].reverse().map((a, i, arr) => {
               const note = a.note || "";
               let icon = "💬"; let color = "var(--gold)";
-              if (note.startsWith("Póliza añadida"))   { icon = "📋"; color = "#27ae60"; }
-              else if (note.startsWith("Póliza editada"))   { icon = "✏️"; color = "#C9A870"; }
-              else if (note.startsWith("Póliza eliminada")) { icon = "🗑"; color = "#8B3A3A"; }
-              else if (note.startsWith("Siniestro registrado")) { icon = "⚠️"; color = "#E08080"; }
-              else if (note.startsWith("Siniestro editado"))    { icon = "✏️"; color = "#C9A870"; }
-              else if (note.startsWith("Siniestro eliminado"))  { icon = "🗑"; color = "#8B3A3A"; }
-              else if (note.startsWith("Documento subido"))     { icon = "📎"; color = "#5B8DB8"; }
-              else if (note.startsWith("Documento eliminado"))  { icon = "🗑"; color = "#8B3A3A"; }
+              if (note.startsWith("Póliza añadida"))           { icon = "📋"; color = "#27ae60"; }
+              else if (note.startsWith("Póliza editada"))      { icon = "✏️"; color = "#C9A870"; }
+              else if (note.startsWith("Póliza eliminada"))    { icon = "🗑"; color = "#8B3A3A"; }
+              else if (note.startsWith("Siniestro registrado")){ icon = "⚠️"; color = "#E08080"; }
+              else if (note.startsWith("Siniestro editado"))   { icon = "✏️"; color = "#C9A870"; }
+              else if (note.startsWith("Siniestro eliminado")) { icon = "🗑"; color = "#8B3A3A"; }
+              else if (note.startsWith("Documento subido"))    { icon = "📎"; color = "#5B8DB8"; }
+              else if (note.startsWith("Documento eliminado")) { icon = "🗑"; color = "#8B3A3A"; }
               const isLast = i === arr.length - 1;
               return (
                 <div key={a.id || i} style={{ display: "flex", gap: 14, position: "relative" }}>
-                  {/* Línea vertical */}
                   <div style={{ display: "flex", flexDirection: "column", alignItems: "center", flexShrink: 0 }}>
                     <div style={{ width: 32, height: 32, borderRadius: "50%", background: "var(--lift)",
                       border: `1.5px solid ${color}`, display: "flex", alignItems: "center",
@@ -491,10 +634,8 @@ export default function ClientDetail({ client, policies, claims, onRefresh, curr
                     </div>
                     {!isLast && <div style={{ width: 1.5, flex: 1, minHeight: 16, background: "var(--border)", margin: "2px 0" }} />}
                   </div>
-                  {/* Contenido */}
                   <div style={{ flex: 1, paddingBottom: isLast ? 0 : 16, paddingTop: 4 }}>
-                    <div style={{ fontSize: 13, color: "var(--text)", fontFamily: "Plus Jakarta Sans, sans-serif",
-                      fontWeight: 500, lineHeight: 1.4 }}>{note}</div>
+                    <div style={{ fontSize: 13, color: "var(--text)", fontFamily: "Plus Jakarta Sans, sans-serif", fontWeight: 500, lineHeight: 1.4 }}>{note}</div>
                     <div style={{ fontSize: 11, color: "var(--mute)", fontFamily: "Plus Jakarta Sans, sans-serif", marginTop: 4 }}>
                       {a.user} · {new Date(a.date).toLocaleDateString("es-ES", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}
                     </div>
@@ -506,7 +647,7 @@ export default function ClientDetail({ client, policies, claims, onRefresh, curr
         </div>
       )}
 
-      {/* TAB: Historial Tesis */}
+      {/* TAB: Tesis */}
       {tab === "tesis" && (
         <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
           <div style={{ background: "var(--lift)", border: "0.5px solid var(--goldDim)", borderRadius: 8, padding: "12px 16px", display: "flex", gap: 10, alignItems: "flex-start" }}>
@@ -515,7 +656,6 @@ export default function ClientDetail({ client, policies, claims, onRefresh, curr
               Registra aquí el historial previo de este cliente en Tesis. Estos datos son solo de referencia y no afectan al pipeline ni a las renovaciones activas.
             </div>
           </div>
-
           <div>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
               <div style={{ fontSize: 11, letterSpacing: "0.15em", color: "var(--gold)", textTransform: "uppercase", fontFamily: "Plus Jakarta Sans, sans-serif" }}>
@@ -550,7 +690,6 @@ export default function ClientDetail({ client, policies, claims, onRefresh, curr
               ))
             }
           </div>
-
           <div>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
               <div style={{ fontSize: 11, letterSpacing: "0.15em", color: "var(--gold)", textTransform: "uppercase", fontFamily: "Plus Jakarta Sans, sans-serif" }}>
@@ -589,71 +728,51 @@ export default function ClientDetail({ client, policies, claims, onRefresh, curr
       )}
 
       {/* TAB: Documentos */}
+      {tab === "correos" && (
+        <EmailHistory entityType="client" entityId={client.id} />
+      )}
       {tab === "documentos" && (
-        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-          {/* Zona subida */}
-          <div style={{ background: "var(--card)", border: "0.5px solid var(--border)", borderRadius: 8, padding: 20 }}>
-            <div style={{ fontSize: 11, letterSpacing: "0.15em", color: "var(--gold)", textTransform: "uppercase",
-              fontFamily: "Plus Jakarta Sans, sans-serif", marginBottom: 14 }}>Subir documento</div>
-            <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-              <input
-                value={uploadDesc}
-                onChange={e => setUploadDesc(e.target.value)}
-                placeholder="Descripción (opcional)"
-                style={{ ...S.input, flex: 1, minWidth: 180 }}
-              />
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept=".pdf,.jpg,.jpeg,.png,.webp,.doc,.docx"
-                onChange={handleUpload}
-                style={{ display: "none" }}
-              />
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                disabled={saving}
-                style={{ ...S.btn, opacity: saving ? 0.7 : 1 }}>
-                {saving ? "Subiendo..." : "📎 Seleccionar fichero"}
-              </button>
+        <div style={{ display: "flex", flexDirection: "column", gap: 28 }}>
+
+          {/* Documentos normales del cliente */}
+          <div>
+            <div style={{ fontSize: 11, letterSpacing: "0.15em", color: "var(--mute)", textTransform: "uppercase",
+              fontFamily: "Plus Jakarta Sans, sans-serif", marginBottom: 14 }}>
+              Documentos del cliente ({documents.length})
             </div>
-            <div style={{ fontSize: 11, color: "var(--mute)", fontFamily: "Plus Jakarta Sans, sans-serif", marginTop: 8 }}>
-              PDF, imágenes o Word · Máximo 10MB
-            </div>
+            <DocSection
+              docs={documents} loading={docsLoading} queue={uploadQueue}
+              desc={uploadDesc} onDescChange={setUploadDesc}
+              inputRef={fileInputRef} onSelectFiles={handleUpload}
+              onDownload={handleDownload} onDelete={(id) => handleDeleteDoc(id, false)}
+            />
           </div>
 
-          {/* Lista documentos */}
-          {docsLoading && <div style={S.empty}>Cargando documentos...</div>}
-          {!docsLoading && documents.length === 0 && (
-            <div style={S.empty}>Sin documentos adjuntos</div>
-          )}
-          {!docsLoading && documents.map(doc => (
-            <div key={doc.id} style={{ background: "var(--card)", border: "0.5px solid var(--border)",
-              borderRadius: 8, padding: "14px 16px", display: "flex", alignItems: "center", gap: 14 }}>
-              <span style={{ fontSize: 24, flexShrink: 0 }}>{fileIcon(doc.content_type)}</span>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 14, color: "var(--text)", fontFamily: "Plus Jakarta Sans, sans-serif",
-                  fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                  {doc.original_name}
-                </div>
-                <div style={{ fontSize: 11, color: "var(--mute)", fontFamily: "Plus Jakarta Sans, sans-serif", marginTop: 3 }}>
-                  {doc.description && <span style={{ marginRight: 10 }}>{doc.description}</span>}
-                  {formatSize(doc.size)} · {new Date(doc.created_at).toLocaleDateString("es-ES")} · {doc.uploaded_by_name}
+          {/* Bóveda privada — solo admins */}
+          {isAdmin && (
+            <div>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14,
+                paddingTop: 20, borderTop: "0.5px solid var(--border)" }}>
+                <span style={{ fontSize: 20 }}>🔐</span>
+                <div>
+                  <div style={{ fontSize: 11, letterSpacing: "0.15em", color: "var(--gold)", textTransform: "uppercase",
+                    fontFamily: "Plus Jakarta Sans, sans-serif" }}>
+                    Bóveda privada ({vaultDocs.length})
+                  </div>
+                  <div style={{ fontSize: 11, color: "var(--mute)", fontFamily: "Plus Jakarta Sans, sans-serif", marginTop: 2 }}>
+                    Contratos, nóminas y documentos sensibles · Solo visible para administradores
+                  </div>
                 </div>
               </div>
-              <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
-                <button
-                  onClick={() => handleDownload(doc.id, doc.original_name)}
-                  style={{ ...S.iconBtn, color: "var(--gold)" }} title="Descargar">
-                  <Icon d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3" size={16} />
-                </button>
-                <button
-                  onClick={() => handleDeleteDoc(doc.id)}
-                  style={{ ...S.iconBtn, color: "#8B3A3A" }} title="Eliminar">
-                  <Icon d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" size={14} />
-                </button>
-              </div>
+              <DocSection
+                docs={vaultDocs} loading={vaultLoading} queue={vaultQueue}
+                desc={vaultDesc} onDescChange={setVaultDesc}
+                inputRef={vaultInputRef} onSelectFiles={handleVaultUpload}
+                onDownload={handleDownload} onDelete={(id) => handleDeleteDoc(id, true)}
+                isVault
+              />
             </div>
-          ))}
+          )}
         </div>
       )}
 
@@ -661,13 +780,11 @@ export default function ClientDetail({ client, policies, claims, onRefresh, curr
       {showPolicyForm && (
         <div style={S.overlay} onClick={e => e.target === e.currentTarget && setShowPolicyForm(false)}>
           <div style={S.modal}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center",
-              marginBottom: 20, paddingBottom: 16, borderBottom: "0.5px solid var(--border)" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20, paddingBottom: 16, borderBottom: "0.5px solid var(--border)" }}>
               <span style={{ fontSize: 18, fontWeight: 700, color: "var(--text)", fontFamily: "Plus Jakarta Sans, sans-serif" }}>
                 {editPolicyId ? "Editar póliza" : "Nueva póliza"}
               </span>
-              <button onClick={() => setShowPolicyForm(false)}
-                style={{ background: "none", border: "none", color: "var(--mute)", cursor: "pointer", fontSize: 18 }}>✕</button>
+              <button onClick={() => setShowPolicyForm(false)} style={{ background: "none", border: "none", color: "var(--mute)", cursor: "pointer", fontSize: 18 }}>✕</button>
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
@@ -687,8 +804,7 @@ export default function ClientDetail({ client, policies, claims, onRefresh, curr
               </div>
               <div>
                 <label style={S.formLabel}>Nº de póliza</label>
-                <input value={policyForm.num_poliza} onChange={e => setP("num_poliza", e.target.value)}
-                  placeholder="Número de póliza" style={S.input} />
+                <input value={policyForm.num_poliza} onChange={e => setP("num_poliza", e.target.value)} placeholder="Número de póliza" style={S.input} />
               </div>
               <div>
                 <label style={S.formLabel}>Prima anual (€)</label>
@@ -708,10 +824,7 @@ export default function ClientDetail({ client, policies, claims, onRefresh, curr
                 <div>
                   <label style={S.formLabel}>Periodicidad</label>
                   <select value={policyForm.periodicidad || "Anual"} onChange={e => setP("periodicidad", e.target.value)} style={S.input}>
-                    <option>Anual</option>
-                    <option>Semestral</option>
-                    <option>Trimestral</option>
-                    <option>Mensual</option>
+                    <option>Anual</option><option>Semestral</option><option>Trimestral</option><option>Mensual</option>
                   </select>
                 </div>
                 <div>
@@ -723,21 +836,17 @@ export default function ClientDetail({ client, policies, claims, onRefresh, curr
                 <div>
                   <label style={S.formLabel}>Estado póliza</label>
                   <select value={policyForm.estado_poliza} onChange={e => setP("estado_poliza", e.target.value)} style={S.input}>
-                    <option value="">—</option>
-                    <option>Activa</option>
-                    <option>Baja</option>
+                    <option value="">—</option><option>Activa</option><option>Baja</option>
                   </select>
                 </div>
               </div>
               <div>
                 <label style={S.formLabel}>Notas</label>
-                <textarea value={policyForm.notas} onChange={e => setP("notas", e.target.value)}
-                  rows={2} style={{ ...S.input, resize: "vertical" }} />
+                <textarea value={policyForm.notas} onChange={e => setP("notas", e.target.value)} rows={2} style={{ ...S.input, resize: "vertical" }} />
               </div>
               <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
                 <button onClick={() => setShowPolicyForm(false)} style={S.btnOutline}>Cancelar</button>
-                <button onClick={handleSavePolicy} disabled={saving}
-                  style={{ ...S.btn, flex: 1, justifyContent: "center", opacity: saving ? 0.7 : 1 }}>
+                <button onClick={handleSavePolicy} disabled={saving} style={{ ...S.btn, flex: 1, justifyContent: "center", opacity: saving ? 0.7 : 1 }}>
                   {saving ? "Guardando..." : editPolicyId ? "Guardar cambios" : "Añadir póliza"}
                 </button>
               </div>
@@ -750,13 +859,11 @@ export default function ClientDetail({ client, policies, claims, onRefresh, curr
       {showClaimForm && (
         <div style={S.overlay} onClick={e => e.target === e.currentTarget && setShowClaimForm(false)}>
           <div style={S.modal}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center",
-              marginBottom: 20, paddingBottom: 16, borderBottom: "0.5px solid var(--border)" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20, paddingBottom: 16, borderBottom: "0.5px solid var(--border)" }}>
               <span style={{ fontSize: 18, fontWeight: 700, color: "var(--text)", fontFamily: "Plus Jakarta Sans, sans-serif" }}>
                 {editClaimId ? "Editar siniestro" : "Nuevo siniestro"}
               </span>
-              <button onClick={() => setShowClaimForm(false)}
-                style={{ background: "none", border: "none", color: "var(--mute)", cursor: "pointer", fontSize: 18 }}>✕</button>
+              <button onClick={() => setShowClaimForm(false)} style={{ background: "none", border: "none", color: "var(--mute)", cursor: "pointer", fontSize: 18 }}>✕</button>
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
@@ -778,8 +885,7 @@ export default function ClientDetail({ client, policies, claims, onRefresh, curr
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                 <div>
                   <label style={S.formLabel}>Nº expediente</label>
-                  <input value={claimForm.num_expediente} onChange={e => setC("num_expediente", e.target.value)}
-                    placeholder="Nº expediente" style={S.input} />
+                  <input value={claimForm.num_expediente} onChange={e => setC("num_expediente", e.target.value)} placeholder="Nº expediente" style={S.input} />
                 </div>
                 <div>
                   <label style={S.formLabel}>Fecha siniestro</label>
@@ -788,31 +894,25 @@ export default function ClientDetail({ client, policies, claims, onRefresh, curr
               </div>
               <div>
                 <label style={S.formLabel}>Descripción *</label>
-                <textarea value={claimForm.descripcion} onChange={e => setC("descripcion", e.target.value)}
-                  rows={3} placeholder="Describe el siniestro..." style={{ ...S.input, resize: "vertical" }} />
+                <textarea value={claimForm.descripcion} onChange={e => setC("descripcion", e.target.value)} rows={3} placeholder="Describe el siniestro..." style={{ ...S.input, resize: "vertical" }} />
               </div>
               <div>
                 <label style={S.formLabel}>Estado</label>
                 <select value={claimForm.estado} onChange={e => setC("estado", e.target.value)} style={S.input}>
-                  <option>Abierto</option>
-                  <option>En gestión</option>
-                  <option>Cerrado</option>
+                  <option>Abierto</option><option>En gestión</option><option>Cerrado</option>
                 </select>
               </div>
               <div>
                 <label style={S.formLabel}>Resolución</label>
-                <input value={claimForm.resolucion} onChange={e => setC("resolucion", e.target.value)}
-                  placeholder="Resolución del siniestro" style={S.input} />
+                <input value={claimForm.resolucion} onChange={e => setC("resolucion", e.target.value)} placeholder="Resolución del siniestro" style={S.input} />
               </div>
               <div>
                 <label style={S.formLabel}>Notas</label>
-                <textarea value={claimForm.notas} onChange={e => setC("notas", e.target.value)}
-                  rows={2} style={{ ...S.input, resize: "vertical" }} />
+                <textarea value={claimForm.notas} onChange={e => setC("notas", e.target.value)} rows={2} style={{ ...S.input, resize: "vertical" }} />
               </div>
               <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
                 <button onClick={() => setShowClaimForm(false)} style={S.btnOutline}>Cancelar</button>
-                <button onClick={handleSaveClaim} disabled={saving}
-                  style={{ ...S.btn, flex: 1, justifyContent: "center", opacity: saving ? 0.7 : 1 }}>
+                <button onClick={handleSaveClaim} disabled={saving} style={{ ...S.btn, flex: 1, justifyContent: "center", opacity: saving ? 0.7 : 1 }}>
                   {saving ? "Guardando..." : editClaimId ? "Guardar cambios" : "Registrar siniestro"}
                 </button>
               </div>
@@ -867,9 +967,7 @@ export default function ClientDetail({ client, policies, claims, onRefresh, curr
               <div>
                 <label style={S.formLabel}>Estado</label>
                 <select value={tesisPolicyForm.estado} onChange={e => setTesisPolicyForm(d => ({...d, estado: e.target.value}))} style={S.input}>
-                  <option>Activa</option>
-                  <option>Baja</option>
-                  <option>Anulada</option>
+                  <option>Activa</option><option>Baja</option><option>Anulada</option>
                 </select>
               </div>
               <div>

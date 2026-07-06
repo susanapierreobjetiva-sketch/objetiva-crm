@@ -13,6 +13,7 @@ import Reports from "./components/Reports";
 import Profile from "./components/Profile";
 import Notifications from "./components/Notifications";
 import Tasks from "./components/Tasks";
+import Backup from "./components/Backup";
 
 if (!document.getElementById("crm-fonts")) {
   const l = document.createElement("link");
@@ -31,14 +32,13 @@ export default function App() {
   const [claims, setClaims]           = useState([]);
   const [loading, setLoading]         = useState(false);
   const [loadError, setLoadError]     = useState("");
-  const [restoring, setRestoring]     = useState(true); // restaurar sesión al inicio
+  const [restoring, setRestoring]     = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isMobile, setIsMobile]       = useState(window.innerWidth <= 768);
   const [selectedClientId, setSelectedClientId] = useState(null);
 
   const T = theme === "dark" ? DARK : LIGHT;
 
-  // Restaurar sesión via refresh cookie al recargar la página
   useEffect(() => {
     api.restoreSession().then(user => {
       if (user) {
@@ -89,7 +89,6 @@ export default function App() {
     if (isMobile) setSidebarOpen(false);
   };
 
-  // Pantalla de carga mientras restauramos sesión
   if (restoring) return (
     <div style={{ display: "flex", alignItems: "center", justifyContent: "center",
       height: "100vh", background: "#0A0804", color: "#C9A870",
@@ -195,16 +194,17 @@ export default function App() {
             onRefresh={loadAll} currentUser={currentUser}
             onBack={() => { setSelectedClientId(null); setView("clients"); }} />
         )}
-        {view === "pipeline"      && <Pipeline policies={policies} clients={clients} onRefresh={loadAll} currentUser={currentUser} />}
+        {view === "pipeline"      && <Pipeline policies={policies} clients={clients} onRefresh={loadAll} currentUser={currentUser} theme={theme} />}
         {view === "activities"    && <Activities policies={policies} clients={clients} onRefresh={loadAll} />}
         {view === "claims"        && <Claims claims={claims} clients={clients} policies={policies} onRefresh={loadAll} currentUser={currentUser} />}
         {view === "tasks"         && <Tasks clients={clients} currentUser={currentUser} />}
-        {view === "reports"       && <Reports clients={clients} policies={policies} claims={claims} />}
+        {view === "reports"       && <Reports clients={clients} policies={policies} claims={claims} currentUser={currentUser} />}
         {view === "profile"       && (
           <Profile currentUser={currentUser} theme={theme}
             onToggleTheme={() => setTheme(t => t === "dark" ? "light" : "dark")}
             onUpdate={setCurrentUser} />
         )}
+        {view === "backup"        && <Backup />}
       </main>
     </div>
   );
