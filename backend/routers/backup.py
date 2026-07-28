@@ -7,7 +7,7 @@ import os, json, gzip
 
 router = APIRouter()
 
-BACKUP_DIR = "/root/crm-backups"
+BACKUP_DIR = os.environ.get("BACKUP_DIR", "/root/crm-backups")
 os.makedirs(BACKUP_DIR, exist_ok=True)
 
 COLLECTIONS = ["clients", "policies", "claims", "tasks", "documents", "audit_logs"]
