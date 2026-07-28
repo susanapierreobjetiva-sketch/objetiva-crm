@@ -4,14 +4,16 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 from dotenv import load_dotenv
+load_dotenv()
 from routers import auth, auth_2fa, clients, policies, claims, tasks, dashboard, documents, audit, backup, ai, emails
 import os
 
-load_dotenv()
 
 ALLOWED_ORIGINS = [
     "https://crm.objetivabroker.es",
 ]
+
+DEV_MODE = os.environ.get("ENV", "production") != "production"
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -28,14 +30,19 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+TRUSTED_HOSTS = ["crm.objetivabroker.es"]
+if os.environ.get("ENV", "production") != "production":
+    TRUSTED_HOSTS.append("localhost")
+
 app.add_middleware(
     TrustedHostMiddleware,
-    allowed_hosts=["crm.objetivabroker.es"],
+    allowed_hosts=TRUSTED_HOSTS,
 )
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
+    allow_origin_regex=r"http://localhost:\d+" if DEV_MODE else None,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE"],
     allow_headers=["Authorization", "Content-Type"],
