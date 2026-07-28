@@ -11,3 +11,8 @@ build/
 
 # OS
 .DS_Store
+
+# Backups y scripts de patch locales
+*.bak_*
+*.bak.*
+patch_*.py
