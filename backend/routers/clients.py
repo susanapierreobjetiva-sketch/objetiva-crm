@@ -185,15 +185,25 @@ async def delete_gestion_libre(gestion_id: str, request: Request, current_user=D
 async def update_gestion_libre(gestion_id: str, request: Request, current_user=Depends(get_current_user)):
     db = request.app.db
     data = await request.json()
-    await db["gestiones_libres"].update_one({"id": gestion_id}, {"$set": {"estado": data.get("estado", "Pendiente")}})
+    campos = {}
+    if "cliente" in data: campos["cliente"] = str(data["cliente"])[:200]
+    if "note"    in data: campos["note"]    = str(data["note"])[:2000]
+    if "tipo"    in data: campos["tipo"]    = str(data["tipo"])[:50]
+    if "estado"  in data: campos["estado"]  = data["estado"]
+    if campos:
+        await db["gestiones_libres"].update_one({"id": gestion_id}, {"$set": campos})
     return {"message": "Actualizada"}
 
 @router.patch("/{client_id}/activity/{activity_id}")
 async def update_activity(client_id: str, activity_id: str, request: Request, current_user=Depends(get_current_user)):
     db = request.app.db
     data = await request.json()
-    await db["clients"].update_one(
-        {"_id": ObjectId(client_id), "activities.id": activity_id},
-        {"$set": {"activities.$.estado": data.get("estado", "Pendiente")}}
-    )
+    campos = {}
+    if "note"   in data: campos["activities.$.note"]   = str(data["note"])[:2000]
+    if "estado" in data: campos["activities.$.estado"] = data["estado"]
+    if campos:
+        await db["clients"].update_one(
+            {"_id": ObjectId(client_id), "activities.id": activity_id},
+            {"$set": campos}
+        )
     return {"message": "Actualizada"}
