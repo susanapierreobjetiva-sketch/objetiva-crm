@@ -3,6 +3,7 @@ import ConfirmModal from "./ConfirmModal";
 import { useState } from "react";
 import ClaimDetail from "./ClaimDetail";
 import { api } from "../api";
+import { DARK, LIGHT } from "../theme";
 
 const ESTADO_COLORS = {
   "Abierto":    { bg: "#1A0A0A", color: "#E08080" },
@@ -17,7 +18,10 @@ const Icon = ({ d, size = 16 }) => (
   </svg>
 );
 
-export default function Claims({ claims, clients, policies, onRefresh, currentUser }) {
+export default function Claims({ claims, clients, policies, onRefresh, currentUser, theme }) {
+  const T = theme === "dark" ? DARK : LIGHT;
+  const S = getStyles(T);
+
   const [filter, setFilter]           = useState("Todos");
   const [search, setSearch]           = useState("");
   const [filterRamo, setFilterRamo]   = useState("Todos");
@@ -71,7 +75,7 @@ export default function Claims({ claims, clients, policies, onRefresh, currentUs
     });
   };
 
-  if (selectedClaim) return <ClaimDetail claim={selectedClaim} client={clients.find(c => c.id === selectedClaim.client_id)} onBack={() => setSelectedClaim(null)} onRefresh={onRefresh} currentUser={currentUser} />;
+  if (selectedClaim) return <ClaimDetail claim={selectedClaim} client={clients.find(c => c.id === selectedClaim.client_id)} onBack={() => setSelectedClaim(null)} onRefresh={onRefresh} currentUser={currentUser} theme={theme} />;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
@@ -85,6 +89,7 @@ export default function Claims({ claims, clients, policies, onRefresh, currentUs
           confirmLabel="Sí, eliminar"
           onConfirm={confirmModal.onConfirm}
           onCancel={() => setConfirmModal(null)}
+          theme={theme}
         />
       )}
 
@@ -107,6 +112,7 @@ export default function Claims({ claims, clients, policies, onRefresh, currentUs
           { label: "Estado",        value: r => r.estado },
           { label: "Resolución",    value: r => r.resolucion },
         ]}
+        theme={theme}
       />
 
       {/* KPIs */}
@@ -115,10 +121,10 @@ export default function Claims({ claims, clients, policies, onRefresh, currentUs
           { label: "Abiertos",   value: abiertos,      color: "#E08080" },
           { label: "En gestión", value: enGestion,     color: "#C9A870" },
           { label: "Cerrados",   value: cerrados,      color: "#27ae60" },
-          { label: "Total",      value: claims.length, color: "var(--gold)" },
+          { label: "Total",      value: claims.length, color: T.gold },
         ].map(k => (
-          <div key={k.label} style={{ background: "var(--card)", border: "0.5px solid var(--border)", borderRadius: 8, padding: "14px 16px" }}>
-            <div style={{ fontSize: 13, letterSpacing: "0.12em", color: "var(--mute)", textTransform: "uppercase",
+          <div key={k.label} style={{ background: T.card, border: `0.5px solid ${T.border}`, borderRadius: 8, padding: "14px 16px" }}>
+            <div style={{ fontSize: 13, letterSpacing: "0.12em", color: T.mute, textTransform: "uppercase",
               fontFamily: "Plus Jakarta Sans, sans-serif", marginBottom: 6 }}>{k.label}</div>
             <div style={{ fontSize: 28, fontWeight: 700, color: k.color, fontFamily: "Plus Jakarta Sans, sans-serif" }}>{k.value}</div>
           </div>
@@ -151,7 +157,7 @@ export default function Claims({ claims, clients, policies, onRefresh, currentUs
           ))}
         </div>
         {showFilters && (
-          <div style={{ background: "var(--card)", border: "0.5px solid var(--border)",
+          <div style={{ background: T.card, border: `0.5px solid ${T.border}`,
             borderRadius: 8, padding: "16px 20px", display: "flex", flexWrap: "wrap", gap: 16 }}>
             <div style={{ minWidth: 180, flex: 1 }}>
               <div style={S.filterLabel}>Ramo</div>
@@ -176,18 +182,18 @@ export default function Claims({ claims, clients, policies, onRefresh, currentUs
         {filtered.length === 0 && <div style={S.empty}>Sin siniestros</div>}
         {filtered.map(c => {
           const client = getClient(c.client_id);
-          const estados = ESTADO_COLORS[c.estado] || { bg: "var(--lift)", color: "var(--mute)" };
+          const estados = ESTADO_COLORS[c.estado] || { bg: T.lift, color: T.mute };
           return (
-            <div key={c.id} style={{ background: "var(--card)",
-              border: `0.5px solid ${c.estado === "Abierto" ? "#3A1A1A" : "var(--border)"}`,
+            <div key={c.id} style={{ background: T.card,
+              border: `0.5px solid ${c.estado === "Abierto" ? "#3A1A1A" : T.border}`,
               borderRadius: 8, padding: "14px 16px", cursor: "pointer" }} onClick={() => setSelectedClaim(c)}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 8 }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 14, color: "var(--gold)", fontFamily: "Plus Jakarta Sans, sans-serif",
+                  <div style={{ fontSize: 14, color: T.gold, fontFamily: "Plus Jakarta Sans, sans-serif",
                     fontWeight: 600, letterSpacing: "0.06em", marginBottom: 4 }}>
                     {client?.name || "Cliente desconocido"}
                   </div>
-                  <div style={{ fontSize: 16, color: "var(--text)", fontFamily: "Plus Jakarta Sans, sans-serif",
+                  <div style={{ fontSize: 16, color: T.text, fontFamily: "Plus Jakarta Sans, sans-serif",
                     fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                     {c.descripcion}
                   </div>
@@ -198,7 +204,7 @@ export default function Claims({ claims, clients, policies, onRefresh, currentUs
                     {c.fecha_siniestro && <span style={S.meta}>{c.fecha_siniestro}</span>}
                   </div>
                   {c.resolucion && (
-                    <div style={{ fontSize: 12, color: "var(--mute)", fontFamily: "Plus Jakarta Sans, sans-serif", marginTop: 6 }}>
+                    <div style={{ fontSize: 12, color: T.mute, fontFamily: "Plus Jakarta Sans, sans-serif", marginTop: 6 }}>
                       Resolución: {c.resolucion}
                     </div>
                   )}
@@ -222,17 +228,19 @@ export default function Claims({ claims, clients, policies, onRefresh, currentUs
   );
 }
 
-const S = {
-  eyebrow:      { fontSize: 13, letterSpacing: "0.2em", color: "var(--gold)", textTransform: "uppercase", marginBottom: 8, fontFamily: "Plus Jakarta Sans, sans-serif" },
-  title:        { fontSize: 40, fontWeight: 700, color: "var(--text)", margin: 0, letterSpacing: "-0.5px", fontFamily: "Plus Jakarta Sans, sans-serif" },
-  filterLabel:  { fontSize: 10, letterSpacing: "0.15em", color: "var(--mute)", textTransform: "uppercase", fontFamily: "Plus Jakarta Sans, sans-serif", marginBottom: 6 },
-  filterSelect: { width: "100%", background: "var(--lift)", border: "0.5px solid var(--border)", color: "var(--text)", padding: "8px 12px", borderRadius: 6, fontFamily: "Plus Jakarta Sans, sans-serif", fontSize: 13, outline: "none", boxSizing: "border-box" },
-  searchWrap:   { display: "flex", alignItems: "center", gap: 10, background: "var(--card)", border: "0.5px solid var(--border)", borderRadius: 8, padding: "10px 16px" },
-  searchInput:  { flex: 1, background: "none", border: "none", color: "var(--text)", fontFamily: "Plus Jakarta Sans, sans-serif", fontSize: 13, outline: "none" },
-  chip:         { padding: "5px 14px", borderRadius: 999, border: "0.5px solid var(--border)", background: "none", color: "var(--textSub)", cursor: "pointer", fontFamily: "Plus Jakarta Sans, sans-serif", fontSize: 11, fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase" },
-  chipActive:   { border: "0.5px solid var(--gold)", color: "var(--bgApp)", background: "var(--gold)", fontWeight: 700 },
-  iconBtn:      { background: "none", border: "none", color: "var(--mute)", cursor: "pointer", padding: 6, borderRadius: 4, display: "flex", alignItems: "center" },
-  meta:         { fontSize: 14, color: "var(--mute)", fontFamily: "Plus Jakarta Sans, sans-serif" },
-  empty:        { textAlign: "center", color: "var(--mute)", fontSize: 13, fontFamily: "Plus Jakarta Sans, sans-serif", padding: "3rem", letterSpacing: "0.08em" },
-  toast:        { position: "fixed", bottom: 28, left: "50%", transform: "translateX(-50%)", background: "var(--card)", border: "1px solid var(--goldDim)", color: "var(--gold)", padding: "11px 22px", borderRadius: 6, fontSize: 12, fontFamily: "Plus Jakarta Sans, sans-serif", letterSpacing: 1.5, textTransform: "uppercase", zIndex: 200 },
-};
+function getStyles(T) {
+  return {
+    eyebrow:      { fontSize: 13, letterSpacing: "0.2em", color: T.gold, textTransform: "uppercase", marginBottom: 8, fontFamily: "Plus Jakarta Sans, sans-serif" },
+    title:        { fontSize: 40, fontWeight: 700, color: T.text, margin: 0, letterSpacing: "-0.5px", fontFamily: "Plus Jakarta Sans, sans-serif" },
+    filterLabel:  { fontSize: 10, letterSpacing: "0.15em", color: T.mute, textTransform: "uppercase", fontFamily: "Plus Jakarta Sans, sans-serif", marginBottom: 6 },
+    filterSelect: { width: "100%", background: T.lift, border: `0.5px solid ${T.border}`, color: T.text, padding: "8px 12px", borderRadius: 6, fontFamily: "Plus Jakarta Sans, sans-serif", fontSize: 13, outline: "none", boxSizing: "border-box" },
+    searchWrap:   { display: "flex", alignItems: "center", gap: 10, background: T.card, border: `0.5px solid ${T.border}`, borderRadius: 8, padding: "10px 16px" },
+    searchInput:  { flex: 1, background: "none", border: "none", color: T.text, fontFamily: "Plus Jakarta Sans, sans-serif", fontSize: 13, outline: "none" },
+    chip:         { padding: "5px 14px", borderRadius: 999, border: `0.5px solid ${T.border}`, background: "none", color: T.textSub, cursor: "pointer", fontFamily: "Plus Jakarta Sans, sans-serif", fontSize: 11, fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase" },
+    chipActive:   { border: `0.5px solid ${T.gold}`, color: T.bgApp, background: T.gold, fontWeight: 700 },
+    iconBtn:      { background: "none", border: "none", color: T.mute, cursor: "pointer", padding: 6, borderRadius: 4, display: "flex", alignItems: "center" },
+    meta:         { fontSize: 14, color: T.mute, fontFamily: "Plus Jakarta Sans, sans-serif" },
+    empty:        { textAlign: "center", color: T.mute, fontSize: 13, fontFamily: "Plus Jakarta Sans, sans-serif", padding: "3rem", letterSpacing: "0.08em" },
+    toast:        { position: "fixed", bottom: 28, left: "50%", transform: "translateX(-50%)", background: T.card, border: `1px solid ${T.goldDim}`, color: T.gold, padding: "11px 22px", borderRadius: 6, fontSize: 12, fontFamily: "Plus Jakarta Sans, sans-serif", letterSpacing: 1.5, textTransform: "uppercase", zIndex: 200 },
+  };
+}

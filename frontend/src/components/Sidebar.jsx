@@ -18,7 +18,7 @@ const LogoMark = ({ gold = "#C9A870" }) => (
 );
 
 const NAV = [
-  { id: "dashboard",  label: "Panel Principal",    icon: "M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" },
+  { id: "dashboard",  label: "Panel Principal",     icon: "M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" },
   { id: "clients",    label: "Clientes",            icon: "M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z" },
   { id: "pipeline",   label: "Estado de pólizas",   icon: "M22 12h-4l-3 9L9 3l-3 9H2" },
   { id: "activities", label: "Renovaciones",        icon: "M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2z" },
@@ -66,7 +66,7 @@ export default function Sidebar({ currentUser, view, setView, onLogout, theme, o
       <div onClick={() => setView("profile")}
         style={{ display: "flex", alignItems: "center", gap: 10,
         margin: "12px 10px", padding: "10px 12px",
-        background: T.card, borderRadius: 8, cursor: "pointer",
+        background: T.card, borderRadius: T.r, cursor: "pointer",
         border: `0.5px solid ${T.border}`, borderLeft: `3px solid ${T.gold}` }}>
         <div style={{ width: 28, height: 28, borderRadius: "50%", background: T.lift,
           display: "flex", alignItems: "center", justifyContent: "center",
@@ -114,14 +114,14 @@ export default function Sidebar({ currentUser, view, setView, onLogout, theme, o
       <div style={{ padding: 10, borderTop: `0.5px solid ${T.border}`, display: "flex", flexDirection: "column", gap: 6 }}>
         <button onClick={onToggleTheme}
           style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 10px",
-            borderRadius: 5, border: `0.5px solid ${T.goldDim}`, background: "none",
+            borderRadius: T.r, border: `0.5px solid ${T.goldDim}`, background: "none",
             color: T.goldDim, cursor: "pointer", fontSize: 11,
             fontFamily: "Plus Jakarta Sans, sans-serif", letterSpacing: "0.1em", width: "100%", textTransform: "uppercase" }}>
           {theme === "dark" ? "☀ Modo claro" : "☾ Modo oscuro"}
         </button>
         <button onClick={onLogout}
           style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 10px",
-            borderRadius: 5, border: `0.5px solid ${T.goldDim}`, background: "none",
+            borderRadius: T.r, border: `0.5px solid ${T.goldDim}`, background: "none",
             color: T.goldDim, cursor: "pointer", fontSize: 11,
             fontFamily: "Plus Jakarta Sans, sans-serif", letterSpacing: "0.1em", width: "100%", textTransform: "uppercase" }}>
           <Icon d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" size={13} />

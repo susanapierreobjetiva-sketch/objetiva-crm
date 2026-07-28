@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { api } from "../api";
 import { useIsMobile } from "../useIsMobile";
+import { DARK, LIGHT } from "../theme";
 import ExportButton from "./ExportButton";
 import PolicyForm from "./PolicyForm";
 
@@ -21,6 +22,9 @@ const STAGE_BG = {
 };
 
 export default function Pipeline({ policies, clients, onRefresh, theme }) {
+  const T = theme === "dark" ? DARK : LIGHT;
+  const S = getStyles(T);
+
   const [dragging, setDragging] = useState(null);
   const [toast, setToast]       = useState("");
   const [showForm, setShowForm] = useState(false);
@@ -65,11 +69,12 @@ export default function Pipeline({ policies, clients, onRefresh, theme }) {
           { label: "Estado trámite", value: r => r.estado_tramite },
           { label: "Estado póliza",  value: r => r.estado_poliza },
         ]}
+        theme={theme}
       />
 
       <button
         onClick={() => { setEditando(null); setShowForm(true); }}
-        style={{ background: "var(--gold)", border: "none", color: "var(--bgApp)",
+        style={{ background: T.gold, border: "none", color: T.bgApp,
           padding: "8px 18px", borderRadius: 6, fontSize: 12,
           fontFamily: "Plus Jakarta Sans, sans-serif", fontWeight: 700,
           cursor: "pointer", letterSpacing: "0.08em" }}>
@@ -93,8 +98,8 @@ export default function Pipeline({ policies, clients, onRefresh, theme }) {
             onDrop={() => handleDrop(stage)}
             style={{
               minWidth: isMobile ? "100%" : 220, flex: isMobile ? "1 1 auto" : "0 0 220px",
-              background: STAGE_BG[stage] || "var(--card)",
-              border: "0.5px solid var(--border)",
+              background: STAGE_BG[stage] || T.card,
+              border: `0.5px solid ${T.border}`,
               borderTop: `2px solid ${STAGE_COLORS[stage]}`,
               borderRadius: 8, padding: 12,
               display: "flex", flexDirection: "column", gap: 8,
@@ -104,7 +109,7 @@ export default function Pipeline({ policies, clients, onRefresh, theme }) {
                 fontFamily: "Plus Jakarta Sans, sans-serif", color: STAGE_COLORS[stage], fontWeight: 700 }}>
                 {stage}
               </span>
-              <span style={{ fontSize: 14, color: "var(--mute)", fontFamily: "Plus Jakarta Sans, sans-serif" }}>
+              <span style={{ fontSize: 14, color: T.mute, fontFamily: "Plus Jakarta Sans, sans-serif" }}>
                 {byStage(stage).length}
               </span>
             </div>
@@ -114,28 +119,28 @@ export default function Pipeline({ policies, clients, onRefresh, theme }) {
                 <div key={p.id} draggable
                   onDragStart={() => setDragging(p)}
                   onDragEnd={() => setDragging(null)}
-                  style={{ background: "var(--card)", border: "0.5px solid var(--border)",
+                  style={{ background: T.card, border: `0.5px solid ${T.border}`,
                     borderRadius: 6, padding: "10px 12px", cursor: "grab",
                     opacity: dragging?.id === p.id ? 0.5 : 1,
                     boxShadow: "0 2px 8px rgba(0,0,0,0.3)" }}>
-                  <div style={{ fontSize: 16, color: "var(--gold)", fontFamily: "Plus Jakarta Sans, sans-serif",
+                  <div style={{ fontSize: 16, color: T.gold, fontFamily: "Plus Jakarta Sans, sans-serif",
                     fontWeight: 600, marginBottom: 2, overflow: "hidden",
                     textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                     {client?.name || "—"}
                   </div>
-                  <div style={{ fontSize: 13, color: "var(--gold)", fontFamily: "Plus Jakarta Sans, sans-serif",
+                  <div style={{ fontSize: 13, color: T.gold, fontFamily: "Plus Jakarta Sans, sans-serif",
                     letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 2 }}>
                     {p.ramo}
                   </div>
                   {p.aseguradora && (
-                    <div style={{ fontSize: 16, color: "var(--mute)", fontFamily: "Plus Jakarta Sans, sans-serif",
+                    <div style={{ fontSize: 16, color: T.mute, fontFamily: "Plus Jakarta Sans, sans-serif",
                       overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                       {p.aseguradora}
                     </div>
                   )}
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 8 }}>
                     {p.prima_anual > 0
-                      ? <span style={{ fontSize: 16, color: "var(--gold)", fontFamily: "Plus Jakarta Sans, sans-serif" }}>{p.prima_anual.toLocaleString("es-ES")} €</span>
+                      ? <span style={{ fontSize: 16, color: T.gold, fontFamily: "Plus Jakarta Sans, sans-serif" }}>{p.prima_anual.toLocaleString("es-ES")} €</span>
                       : <span />}
                     {p.fecha_renovacion && p.fecha_renovacion <= today && (
                       <span title={`Renovación: ${p.fecha_renovacion}`} style={{ fontSize: 12 }}>⚠️</span>
@@ -143,7 +148,7 @@ export default function Pipeline({ policies, clients, onRefresh, theme }) {
                   </div>
                   <div style={{ display: "flex", gap: 6, marginTop: 8, justifyContent: "flex-end" }}>
                     <button onClick={(e) => { e.stopPropagation(); setEditando(p); setShowForm(true); }}
-                      style={{ background: "none", border: "0.5px solid var(--border)", color: "var(--gold)",
+                      style={{ background: "none", border: `0.5px solid ${T.border}`, color: T.gold,
                         fontSize: 11, padding: "3px 10px", borderRadius: 4, cursor: "pointer",
                         fontFamily: "Plus Jakarta Sans, sans-serif" }}>Editar</button>
                     <button onClick={async (e) => { e.stopPropagation();
@@ -159,7 +164,7 @@ export default function Pipeline({ policies, clients, onRefresh, theme }) {
               );
             })}
             {byStage(stage).length === 0 && (
-              <div style={{ textAlign: "center", color: "var(--mute)", fontSize: 13,
+              <div style={{ textAlign: "center", color: T.mute, fontSize: 13,
                 fontFamily: "Plus Jakarta Sans, sans-serif", padding: "1rem 0", letterSpacing: "0.08em" }}>
                 Sin pólizas
               </div>
@@ -167,7 +172,7 @@ export default function Pipeline({ policies, clients, onRefresh, theme }) {
           </div>
         ))}
       </div>
-      <div style={{ fontSize: 14, color: "var(--mute)", fontFamily: "Plus Jakarta Sans, sans-serif",
+      <div style={{ fontSize: 14, color: T.mute, fontFamily: "Plus Jakarta Sans, sans-serif",
         textAlign: "center", letterSpacing: "0.08em" }}>
         Arrastra las tarjetas para cambiar de estado
       </div>
@@ -189,8 +194,10 @@ export default function Pipeline({ policies, clients, onRefresh, theme }) {
   );
 }
 
-const S = {
-  eyebrow: { fontSize: 12, letterSpacing: "0.2em", color: "var(--gold)", textTransform: "uppercase", marginBottom: 8, fontFamily: "Plus Jakarta Sans, sans-serif" },
-  title:   { fontSize: 40, fontWeight: 700, color: "var(--text)", margin: 0, letterSpacing: "-0.5px", fontFamily: "Plus Jakarta Sans, sans-serif" },
-  toast:   { position: "fixed", bottom: 28, left: "50%", transform: "translateX(-50%)", background: "var(--card)", border: "1px solid var(--goldDim)", color: "var(--gold)", padding: "11px 22px", borderRadius: 6, fontSize: 12, fontFamily: "Plus Jakarta Sans, sans-serif", letterSpacing: 1.5, textTransform: "uppercase", zIndex: 200 },
-};
+function getStyles(T) {
+  return {
+    eyebrow: { fontSize: 12, letterSpacing: "0.2em", color: T.gold, textTransform: "uppercase", marginBottom: 8, fontFamily: "Plus Jakarta Sans, sans-serif" },
+    title:   { fontSize: 40, fontWeight: 700, color: T.text, margin: 0, letterSpacing: "-0.5px", fontFamily: "Plus Jakarta Sans, sans-serif" },
+    toast:   { position: "fixed", bottom: 28, left: "50%", transform: "translateX(-50%)", background: T.card, border: `1px solid ${T.goldDim}`, color: T.gold, padding: "11px 22px", borderRadius: 6, fontSize: 12, fontFamily: "Plus Jakarta Sans, sans-serif", letterSpacing: 1.5, textTransform: "uppercase", zIndex: 200 },
+  };
+}

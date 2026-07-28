@@ -3,6 +3,7 @@ import { api } from "../api";
 import ConfirmModal from "./ConfirmModal";
 import AIEmailModal from "./AIEmailModal";
 import EmailHistory from "./EmailHistory";
+import { DARK, LIGHT } from "../theme";
 
 const emptyTesisPolicy = {
   ramo: "", aseguradora: "", num_poliza: "", prima_anual: 0,
@@ -42,7 +43,10 @@ const emptyClaim = {
   estado: "Abierto", resolucion: "", notas: "",
 };
 
-export default function ClientDetail({ client, policies, claims, onRefresh, currentUser, onBack }) {
+export default function ClientDetail({ client, policies, claims, onRefresh, currentUser, onBack, theme }) {
+  const T = theme === "dark" ? DARK : LIGHT;
+  const S = getStyles(T);
+
   const [tab, setTab]               = useState("polizas");
   const [showPolicyForm, setShowPolicyForm] = useState(false);
   const [showClaimForm, setShowClaimForm]   = useState(false);
@@ -325,11 +329,11 @@ export default function ClientDetail({ client, policies, claims, onRefresh, curr
       <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 6 }}>
         {queue.map((item, i) => (
           <div key={i} style={{ display: "flex", alignItems: "center", gap: 10,
-            background: "var(--lift)", borderRadius: 6, padding: "8px 12px",
-            border: `0.5px solid ${item.status === "error" ? "#8B3A3A55" : item.status === "done" ? "#27ae6044" : "var(--border)"}` }}>
+            background: T.lift, borderRadius: 6, padding: "8px 12px",
+            border: `0.5px solid ${item.status === "error" ? "#8B3A3A55" : item.status === "done" ? "#27ae6044" : T.border}` }}>
             <span style={{ fontSize: 16 }}>{fileIcon(item.file.type)}</span>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 12, color: "var(--text)", fontFamily: "Plus Jakarta Sans, sans-serif",
+              <div style={{ fontSize: 12, color: T.text, fontFamily: "Plus Jakarta Sans, sans-serif",
                 overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                 {item.file.name}
               </div>
@@ -338,7 +342,7 @@ export default function ClientDetail({ client, policies, claims, onRefresh, curr
               )}
             </div>
             <span style={{ fontSize: 12, fontFamily: "Plus Jakarta Sans, sans-serif", flexShrink: 0,
-              color: item.status === "done" ? "#27ae60" : item.status === "error" ? "#E08080" : item.status === "uploading" ? "var(--gold)" : "var(--mute)" }}>
+              color: item.status === "done" ? "#27ae60" : item.status === "error" ? "#E08080" : item.status === "uploading" ? T.gold : T.mute }}>
               {item.status === "done" ? "✓ Subido" : item.status === "error" ? "✗ Error" : item.status === "uploading" ? "↑ Subiendo..." : "En cola"}
             </span>
           </div>
@@ -350,8 +354,8 @@ export default function ClientDetail({ client, policies, claims, onRefresh, curr
   // ── Sección docs reutilizable ──────────────────────────────
   const DocSection = ({ docs, loading, queue, desc, onDescChange, inputRef, onSelectFiles, onDownload, onDelete, isVault = false }) => (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-      <div style={{ background: "var(--card)", border: `0.5px solid ${isVault ? "var(--goldDim)" : "var(--border)"}`, borderRadius: 8, padding: 20 }}>
-        <div style={{ fontSize: 11, letterSpacing: "0.15em", color: isVault ? "var(--gold)" : "var(--mute)",
+      <div style={{ background: T.card, border: `0.5px solid ${isVault ? T.goldDim : T.border}`, borderRadius: 8, padding: 20 }}>
+        <div style={{ fontSize: 11, letterSpacing: "0.15em", color: isVault ? T.gold : T.mute,
           textTransform: "uppercase", fontFamily: "Plus Jakarta Sans, sans-serif", marginBottom: 14 }}>
           {isVault ? "🔐 Subir documento sensible" : "Subir documentos"}
         </div>
@@ -367,7 +371,7 @@ export default function ClientDetail({ client, policies, claims, onRefresh, curr
             {saving ? "Subiendo..." : "📎 Seleccionar ficheros"}
           </button>
         </div>
-        <div style={{ fontSize: 11, color: "var(--mute)", fontFamily: "Plus Jakarta Sans, sans-serif", marginTop: 8 }}>
+        <div style={{ fontSize: 11, color: T.mute, fontFamily: "Plus Jakarta Sans, sans-serif", marginTop: 8 }}>
           PDF, imágenes o Word · Máx. 10MB · Puedes seleccionar varios a la vez
         </div>
         <UploadQueue queue={queue} />
@@ -376,22 +380,22 @@ export default function ClientDetail({ client, policies, claims, onRefresh, curr
       {loading && <div style={S.empty}>Cargando documentos...</div>}
       {!loading && docs.length === 0 && <div style={S.empty}>Sin documentos adjuntos</div>}
       {!loading && docs.map(doc => (
-        <div key={doc.id} style={{ background: "var(--card)", border: "0.5px solid var(--border)",
+        <div key={doc.id} style={{ background: T.card, border: `0.5px solid ${T.border}`,
           borderRadius: 8, padding: "14px 16px", display: "flex", alignItems: "center", gap: 14 }}>
           <span style={{ fontSize: 24, flexShrink: 0 }}>{fileIcon(doc.content_type)}</span>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 14, color: "var(--text)", fontFamily: "Plus Jakarta Sans, sans-serif",
+            <div style={{ fontSize: 14, color: T.text, fontFamily: "Plus Jakarta Sans, sans-serif",
               fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
               {doc.original_name}
             </div>
-            <div style={{ fontSize: 11, color: "var(--mute)", fontFamily: "Plus Jakarta Sans, sans-serif", marginTop: 3 }}>
+            <div style={{ fontSize: 11, color: T.mute, fontFamily: "Plus Jakarta Sans, sans-serif", marginTop: 3 }}>
               {doc.description && <span style={{ marginRight: 10 }}>{doc.description}</span>}
               {formatSize(doc.size)} · {new Date(doc.created_at).toLocaleDateString("es-ES")} · {doc.uploaded_by_name}
             </div>
           </div>
           <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
             <button onClick={() => onDownload(doc.id, doc.original_name)}
-              style={{ ...S.iconBtn, color: "var(--gold)" }} title="Descargar">
+              style={{ ...S.iconBtn, color: T.gold }} title="Descargar">
               <Icon d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3" size={16} />
             </button>
             <button onClick={() => onDelete(doc.id)}
@@ -407,7 +411,7 @@ export default function ClientDetail({ client, policies, claims, onRefresh, curr
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
       {toast && <div style={S.toast}>{toast}</div>}
-      {showAIEmail && <AIEmailModal onClose={() => setShowAIEmail(false)} entityType="client" entityId={client.id} />}
+      {showAIEmail && <AIEmailModal onClose={() => setShowAIEmail(false)} entityType="client" entityId={client.id} theme={theme} />}
 
       {confirmModal && (
         <ConfirmModal
@@ -417,29 +421,30 @@ export default function ClientDetail({ client, policies, claims, onRefresh, curr
           confirmLabel="Sí, eliminar"
           onConfirm={confirmModal.onConfirm}
           onCancel={() => setConfirmModal(null)}
+          theme={theme}
         />
       )}
 
-      <button onClick={onBack} style={{ background: "none", border: "none", color: "var(--goldDim)",
+      <button onClick={onBack} style={{ background: "none", border: "none", color: T.goldDim,
         cursor: "pointer", fontFamily: "Plus Jakarta Sans, sans-serif", fontSize: 11, letterSpacing: "0.12em",
         textTransform: "uppercase", padding: 0, display: "flex", alignItems: "center", gap: 6 }}>
         ← Volver a clientes
       </button>
 
       {/* Cabecera cliente */}
-      <div style={{ background: "var(--card)", border: "0.5px solid var(--border)", borderRadius: 8, padding: "20px 24px" }}>
+      <div style={{ background: T.card, border: `0.5px solid ${T.border}`, borderRadius: 8, padding: "20px 24px" }}>
         <div style={{ display: "flex", alignItems: "flex-start", gap: 16, flexWrap: "wrap" }}>
-          <div style={{ width: 52, height: 52, borderRadius: "50%", background: "var(--lift)",
-            border: "2px solid var(--goldDim)", display: "flex", alignItems: "center",
-            justifyContent: "center", fontSize: 20, fontWeight: 700, color: "var(--gold)", flexShrink: 0 }}>
+          <div style={{ width: 52, height: 52, borderRadius: "50%", background: T.lift,
+            border: `2px solid ${T.goldDim}`, display: "flex", alignItems: "center",
+            justifyContent: "center", fontSize: 20, fontWeight: 700, color: T.gold, flexShrink: 0 }}>
             {client.name.charAt(0).toUpperCase()}
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontFamily: "Plus Jakarta Sans, sans-serif", fontSize: 20, fontWeight: 700, color: "var(--text)" }}>
+            <div style={{ fontFamily: "Plus Jakarta Sans, sans-serif", fontSize: 20, fontWeight: 700, color: T.text }}>
               {client.name}
             </div>
             {client.empresa && (
-              <div style={{ fontSize: 13, color: "var(--mute)", fontFamily: "Plus Jakarta Sans, sans-serif", marginTop: 2 }}>{client.empresa}</div>
+              <div style={{ fontSize: 13, color: T.mute, fontFamily: "Plus Jakarta Sans, sans-serif", marginTop: 2 }}>{client.empresa}</div>
             )}
             <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginTop: 8 }}>
               {client.email && <span style={S.meta}>✉ {client.email}</span>}
@@ -450,21 +455,21 @@ export default function ClientDetail({ client, policies, claims, onRefresh, curr
           </div>
           <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
             <div style={{ textAlign: "center" }}>
-              <div style={{ fontSize: 22, fontWeight: 700, color: "var(--gold)", fontFamily: "Plus Jakarta Sans, sans-serif" }}>{policies.length}</div>
-              <div style={{ fontSize: 9, color: "var(--mute)", fontFamily: "Plus Jakarta Sans, sans-serif", letterSpacing: "0.08em", textTransform: "uppercase" }}>pólizas</div>
+              <div style={{ fontSize: 22, fontWeight: 700, color: T.gold, fontFamily: "Plus Jakarta Sans, sans-serif" }}>{policies.length}</div>
+              <div style={{ fontSize: 9, color: T.mute, fontFamily: "Plus Jakarta Sans, sans-serif", letterSpacing: "0.08em", textTransform: "uppercase" }}>pólizas</div>
             </div>
             <div style={{ textAlign: "center" }}>
               <div style={{ fontSize: 22, fontWeight: 700, color: "#27ae60", fontFamily: "Plus Jakarta Sans, sans-serif" }}>{claims.length}</div>
-              <div style={{ fontSize: 9, color: "var(--mute)", fontFamily: "Plus Jakarta Sans, sans-serif", letterSpacing: "0.08em", textTransform: "uppercase" }}>siniestros</div>
+              <div style={{ fontSize: 9, color: T.mute, fontFamily: "Plus Jakarta Sans, sans-serif", letterSpacing: "0.08em", textTransform: "uppercase" }}>siniestros</div>
             </div>
             {prima_total > 0 && (
               <div style={{ textAlign: "center" }}>
-                <div style={{ fontSize: 18, fontWeight: 700, color: "var(--gold)", fontFamily: "Plus Jakarta Sans, sans-serif" }}>{prima_total.toLocaleString("es-ES")} €</div>
-                <div style={{ fontSize: 9, color: "var(--mute)", fontFamily: "Plus Jakarta Sans, sans-serif", letterSpacing: "0.08em", textTransform: "uppercase" }}>prima/año</div>
+                <div style={{ fontSize: 18, fontWeight: 700, color: T.gold, fontFamily: "Plus Jakarta Sans, sans-serif" }}>{prima_total.toLocaleString("es-ES")} €</div>
+                <div style={{ fontSize: 9, color: T.mute, fontFamily: "Plus Jakarta Sans, sans-serif", letterSpacing: "0.08em", textTransform: "uppercase" }}>prima/año</div>
               </div>
             )}
             <div style={{ display: "flex", alignItems: "center" }}>
-              <button onClick={() => setShowAIEmail(true)} style={{ background: "var(--lift)", border: "1px solid var(--goldDim)", borderRadius: 8, color: "var(--gold)", cursor: "pointer", fontFamily: "Plus Jakarta Sans, sans-serif", fontSize: 11, fontWeight: 600, padding: "6px 14px", letterSpacing: "0.08em" }}>✨ Redactar correo</button>
+              <button onClick={() => setShowAIEmail(true)} style={{ background: T.lift, border: `1px solid ${T.goldDim}`, borderRadius: 8, color: T.gold, cursor: "pointer", fontFamily: "Plus Jakarta Sans, sans-serif", fontSize: 11, fontWeight: 600, padding: "6px 14px", letterSpacing: "0.08em" }}>✨ Redactar correo</button>
             </div>
           </div>
         </div>
@@ -472,14 +477,14 @@ export default function ClientDetail({ client, policies, claims, onRefresh, curr
 
       {/* Venta cruzada */}
       {ramosFaltantes.length > 0 && (
-        <div style={{ background: "var(--card)", border: "0.5px solid var(--goldDim)", borderRadius: 8, padding: "14px 18px" }}>
-          <div style={{ fontSize: 10, letterSpacing: "0.15em", color: "var(--gold)", textTransform: "uppercase",
+        <div style={{ background: T.card, border: `0.5px solid ${T.goldDim}`, borderRadius: 8, padding: "14px 18px" }}>
+          <div style={{ fontSize: 10, letterSpacing: "0.15em", color: T.gold, textTransform: "uppercase",
             fontFamily: "Plus Jakarta Sans, sans-serif", marginBottom: 10 }}>💡 Oportunidades de venta cruzada</div>
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
             {ramosFaltantes.map(r => (
               <span key={r} onClick={() => { setP("ramo", r); setShowPolicyForm(true); }}
-                style={{ padding: "4px 12px", borderRadius: 999, background: "var(--lift)",
-                  border: "0.5px solid var(--goldDim)", color: "var(--gold)",
+                style={{ padding: "4px 12px", borderRadius: 999, background: T.lift,
+                  border: `0.5px solid ${T.goldDim}`, color: T.gold,
                   fontFamily: "Plus Jakarta Sans, sans-serif", fontSize: 10, cursor: "pointer",
                   letterSpacing: "0.08em", textTransform: "uppercase" }}>
                 + {r}
@@ -516,28 +521,28 @@ export default function ClientDetail({ client, policies, claims, onRefresh, curr
           </div>
           {policies.length === 0 && <div style={S.empty}>Sin pólizas registradas</div>}
           {policies.map(p => (
-            <div key={p.id} style={{ background: "var(--card)", border: "0.5px solid var(--border)", borderRadius: 8, padding: "14px 16px" }}>
+            <div key={p.id} style={{ background: T.card, border: `0.5px solid ${T.border}`, borderRadius: 8, padding: "14px 16px" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 8 }}>
                 <div>
                   <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-                    <span style={{ fontFamily: "Plus Jakarta Sans, sans-serif", fontSize: 13, fontWeight: 700, color: "var(--gold)", textTransform: "uppercase", letterSpacing: "0.06em" }}>{p.ramo}</span>
-                    <span style={{ fontSize: 15, color: "var(--text)", fontFamily: "Plus Jakarta Sans, sans-serif" }}>{p.aseguradora}</span>
-                    {p.num_poliza && <span style={{ fontSize: 12, color: "var(--mute)", fontFamily: "Plus Jakarta Sans, sans-serif" }}>Nº {p.num_poliza}</span>}
+                    <span style={{ fontFamily: "Plus Jakarta Sans, sans-serif", fontSize: 13, fontWeight: 700, color: T.gold, textTransform: "uppercase", letterSpacing: "0.06em" }}>{p.ramo}</span>
+                    <span style={{ fontSize: 15, color: T.text, fontFamily: "Plus Jakarta Sans, sans-serif" }}>{p.aseguradora}</span>
+                    {p.num_poliza && <span style={{ fontSize: 12, color: T.mute, fontFamily: "Plus Jakarta Sans, sans-serif" }}>Nº {p.num_poliza}</span>}
                   </div>
                   <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginTop: 6 }}>
                     {p.prima_anual > 0 && <span style={S.meta}>{p.prima_anual.toLocaleString("es-ES")} €/año</span>}
                     {p.periodicidad && p.periodicidad !== "Anual" && <span style={S.meta}>{p.periodicidad}</span>}
                     {p.fecha_efecto && <span style={S.meta}>Efecto: {p.fecha_efecto}</span>}
                     {p.fecha_renovacion && (
-                      <span style={{ ...S.meta, color: p.fecha_renovacion <= today ? "#E08080" : "var(--mute)" }}>
+                      <span style={{ ...S.meta, color: p.fecha_renovacion <= today ? "#E08080" : T.mute }}>
                         Renovación: {p.fecha_renovacion} {p.fecha_renovacion <= today ? "⚠️" : ""}
                       </span>
                     )}
                   </div>
                 </div>
                 <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-                  <span style={{ fontSize: 10, padding: "3px 10px", borderRadius: 999, background: "var(--lift)",
-                    color: STAGE_COLORS[p.estado_tramite] || "var(--mute)", fontFamily: "Plus Jakarta Sans, sans-serif", letterSpacing: "0.08em" }}>{p.estado_tramite}</span>
+                  <span style={{ fontSize: 10, padding: "3px 10px", borderRadius: 999, background: T.lift,
+                    color: STAGE_COLORS[p.estado_tramite] || T.mute, fontFamily: "Plus Jakarta Sans, sans-serif", letterSpacing: "0.08em" }}>{p.estado_tramite}</span>
                   {p.estado_poliza && (
                     <span style={{ fontSize: 10, padding: "3px 10px", borderRadius: 999,
                       background: p.estado_poliza === "Activa" ? "#0A1A0A" : "#1A0A0A",
@@ -553,7 +558,7 @@ export default function ClientDetail({ client, policies, claims, onRefresh, curr
                   </button>
                 </div>
               </div>
-              {p.notas && <div style={{ fontSize: 12, color: "var(--mute)", fontFamily: "Plus Jakarta Sans, sans-serif", marginTop: 8 }}>{p.notas}</div>}
+              {p.notas && <div style={{ fontSize: 12, color: T.mute, fontFamily: "Plus Jakarta Sans, sans-serif", marginTop: 8 }}>{p.notas}</div>}
             </div>
           ))}
         </div>
@@ -569,21 +574,21 @@ export default function ClientDetail({ client, policies, claims, onRefresh, curr
           </div>
           {claims.length === 0 && <div style={S.empty}>Sin siniestros registrados</div>}
           {claims.map(c => (
-            <div key={c.id} style={{ background: "var(--card)", border: `0.5px solid ${c.estado === "Abierto" ? "#8B3A3A" : "var(--border)"}`, borderRadius: 8, padding: "14px 16px" }}>
+            <div key={c.id} style={{ background: T.card, border: `0.5px solid ${c.estado === "Abierto" ? "#8B3A3A" : T.border}`, borderRadius: 8, padding: "14px 16px" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 8 }}>
                 <div>
-                  <div style={{ fontFamily: "Plus Jakarta Sans, sans-serif", fontSize: 13, fontWeight: 600, color: "var(--text)" }}>{c.descripcion}</div>
+                  <div style={{ fontFamily: "Plus Jakarta Sans, sans-serif", fontSize: 13, fontWeight: 600, color: T.text }}>{c.descripcion}</div>
                   <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginTop: 6 }}>
                     {c.ramo && <span style={S.meta}>{c.ramo}</span>}
                     {c.aseguradora && <span style={S.meta}>{c.aseguradora}</span>}
                     {c.num_expediente && <span style={S.meta}>Exp: {c.num_expediente}</span>}
                     {c.fecha_siniestro && <span style={S.meta}>{c.fecha_siniestro}</span>}
                   </div>
-                  {c.resolucion && <div style={{ fontSize: 12, color: "var(--mute)", fontFamily: "Plus Jakarta Sans, sans-serif", marginTop: 6 }}>Resolución: {c.resolucion}</div>}
+                  {c.resolucion && <div style={{ fontSize: 12, color: T.mute, fontFamily: "Plus Jakarta Sans, sans-serif", marginTop: 6 }}>Resolución: {c.resolucion}</div>}
                 </div>
                 <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                   <span style={{ fontSize: 10, padding: "3px 10px", borderRadius: 999,
-                    background: c.estado === "Abierto" ? "#1A0A0A" : c.estado === "En gestión" ? "#1A1508" : "var(--lift)",
+                    background: c.estado === "Abierto" ? "#1A0A0A" : c.estado === "En gestión" ? "#1A1508" : T.lift,
                     color: c.estado === "Abierto" ? "#E08080" : c.estado === "En gestión" ? "#C9A870" : "#27ae60",
                     fontFamily: "Plus Jakarta Sans, sans-serif", letterSpacing: "0.08em" }}>{c.estado}</span>
                   <button onClick={() => { setEditClaimId(c.id); setClaimForm({ ...emptyClaim, ...c }); setShowClaimForm(true); }}
@@ -614,7 +619,7 @@ export default function ClientDetail({ client, policies, claims, onRefresh, curr
           <div style={{ display: "flex", flexDirection: "column", gap: 0, position: "relative" }}>
             {[...(client.activities || [])].reverse().map((a, i, arr) => {
               const note = a.note || "";
-              let icon = "💬"; let color = "var(--gold)";
+              let icon = "💬"; let color = T.gold;
               if (note.startsWith("Póliza añadida"))           { icon = "📋"; color = "#27ae60"; }
               else if (note.startsWith("Póliza editada"))      { icon = "✏️"; color = "#C9A870"; }
               else if (note.startsWith("Póliza eliminada"))    { icon = "🗑"; color = "#8B3A3A"; }
@@ -627,16 +632,16 @@ export default function ClientDetail({ client, policies, claims, onRefresh, curr
               return (
                 <div key={a.id || i} style={{ display: "flex", gap: 14, position: "relative" }}>
                   <div style={{ display: "flex", flexDirection: "column", alignItems: "center", flexShrink: 0 }}>
-                    <div style={{ width: 32, height: 32, borderRadius: "50%", background: "var(--lift)",
+                    <div style={{ width: 32, height: 32, borderRadius: "50%", background: T.lift,
                       border: `1.5px solid ${color}`, display: "flex", alignItems: "center",
                       justifyContent: "center", fontSize: 14, flexShrink: 0, zIndex: 1 }}>
                       {icon}
                     </div>
-                    {!isLast && <div style={{ width: 1.5, flex: 1, minHeight: 16, background: "var(--border)", margin: "2px 0" }} />}
+                    {!isLast && <div style={{ width: 1.5, flex: 1, minHeight: 16, background: T.border, margin: "2px 0" }} />}
                   </div>
                   <div style={{ flex: 1, paddingBottom: isLast ? 0 : 16, paddingTop: 4 }}>
-                    <div style={{ fontSize: 13, color: "var(--text)", fontFamily: "Plus Jakarta Sans, sans-serif", fontWeight: 500, lineHeight: 1.4 }}>{note}</div>
-                    <div style={{ fontSize: 11, color: "var(--mute)", fontFamily: "Plus Jakarta Sans, sans-serif", marginTop: 4 }}>
+                    <div style={{ fontSize: 13, color: T.text, fontFamily: "Plus Jakarta Sans, sans-serif", fontWeight: 500, lineHeight: 1.4 }}>{note}</div>
+                    <div style={{ fontSize: 11, color: T.mute, fontFamily: "Plus Jakarta Sans, sans-serif", marginTop: 4 }}>
                       {a.user} · {new Date(a.date).toLocaleDateString("es-ES", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}
                     </div>
                   </div>
@@ -650,15 +655,15 @@ export default function ClientDetail({ client, policies, claims, onRefresh, curr
       {/* TAB: Tesis */}
       {tab === "tesis" && (
         <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-          <div style={{ background: "var(--lift)", border: "0.5px solid var(--goldDim)", borderRadius: 8, padding: "12px 16px", display: "flex", gap: 10, alignItems: "flex-start" }}>
+          <div style={{ background: T.lift, border: `0.5px solid ${T.goldDim}`, borderRadius: 8, padding: "12px 16px", display: "flex", gap: 10, alignItems: "flex-start" }}>
             <span style={{ fontSize: 16 }}>📋</span>
-            <div style={{ fontSize: 12, color: "var(--mute)", fontFamily: "Plus Jakarta Sans, sans-serif", lineHeight: 1.6 }}>
+            <div style={{ fontSize: 12, color: T.mute, fontFamily: "Plus Jakarta Sans, sans-serif", lineHeight: 1.6 }}>
               Registra aquí el historial previo de este cliente en Tesis. Estos datos son solo de referencia y no afectan al pipeline ni a las renovaciones activas.
             </div>
           </div>
           <div>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-              <div style={{ fontSize: 11, letterSpacing: "0.15em", color: "var(--gold)", textTransform: "uppercase", fontFamily: "Plus Jakarta Sans, sans-serif" }}>
+              <div style={{ fontSize: 11, letterSpacing: "0.15em", color: T.gold, textTransform: "uppercase", fontFamily: "Plus Jakarta Sans, sans-serif" }}>
                 Pólizas históricas ({(client.tesis_policies || []).length})
               </div>
               <button onClick={() => { setTesisPolicyForm(emptyTesisPolicy); setShowTesisPolicyForm(true); }} style={S.btn}>+ Añadir póliza</button>
@@ -666,21 +671,21 @@ export default function ClientDetail({ client, policies, claims, onRefresh, curr
             {(client.tesis_policies || []).length === 0
               ? <div style={S.empty}>Sin pólizas históricas registradas</div>
               : (client.tesis_policies || []).map((p, i) => (
-                <div key={p.id || i} style={{ background: "var(--card)", border: "0.5px solid var(--border)", borderRadius: 8, padding: "12px 16px", marginBottom: 8 }}>
+                <div key={p.id || i} style={{ background: T.card, border: `0.5px solid ${T.border}`, borderRadius: 8, padding: "12px 16px", marginBottom: 8 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 8 }}>
                     <div>
                       <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-                        <span style={{ fontFamily: "Plus Jakarta Sans, sans-serif", fontSize: 13, fontWeight: 700, color: "var(--gold)", textTransform: "uppercase" }}>{p.ramo}</span>
-                        <span style={{ fontSize: 13, color: "var(--text)", fontFamily: "Plus Jakarta Sans, sans-serif" }}>{p.aseguradora}</span>
-                        {p.num_poliza && <span style={{ fontSize: 11, color: "var(--mute)", fontFamily: "Plus Jakarta Sans, sans-serif" }}>Nº {p.num_poliza}</span>}
+                        <span style={{ fontFamily: "Plus Jakarta Sans, sans-serif", fontSize: 13, fontWeight: 700, color: T.gold, textTransform: "uppercase" }}>{p.ramo}</span>
+                        <span style={{ fontSize: 13, color: T.text, fontFamily: "Plus Jakarta Sans, sans-serif" }}>{p.aseguradora}</span>
+                        {p.num_poliza && <span style={{ fontSize: 11, color: T.mute, fontFamily: "Plus Jakarta Sans, sans-serif" }}>Nº {p.num_poliza}</span>}
                       </div>
                       <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginTop: 6 }}>
                         {p.prima_anual > 0 && <span style={S.meta}>{p.prima_anual.toLocaleString("es-ES")} €/año</span>}
                         {p.fecha_efecto && <span style={S.meta}>Efecto: {p.fecha_efecto}</span>}
                         {p.fecha_vencimiento && <span style={S.meta}>Vencimiento: {p.fecha_vencimiento}</span>}
-                        {p.estado && <span style={{ ...S.meta, color: p.estado === "Activa" ? "#27ae60" : "var(--mute)" }}>{p.estado}</span>}
+                        {p.estado && <span style={{ ...S.meta, color: p.estado === "Activa" ? "#27ae60" : T.mute }}>{p.estado}</span>}
                       </div>
-                      {p.notas && <div style={{ fontSize: 12, color: "var(--mute)", fontFamily: "Plus Jakarta Sans, sans-serif", marginTop: 6 }}>{p.notas}</div>}
+                      {p.notas && <div style={{ fontSize: 12, color: T.mute, fontFamily: "Plus Jakarta Sans, sans-serif", marginTop: 6 }}>{p.notas}</div>}
                     </div>
                     <button onClick={() => handleDeleteTesisPolicy(p.id)} style={{ ...S.iconBtn, color: "#8B3A3A" }}>
                       <Icon d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" size={14} />
@@ -692,7 +697,7 @@ export default function ClientDetail({ client, policies, claims, onRefresh, curr
           </div>
           <div>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-              <div style={{ fontSize: 11, letterSpacing: "0.15em", color: "var(--gold)", textTransform: "uppercase", fontFamily: "Plus Jakarta Sans, sans-serif" }}>
+              <div style={{ fontSize: 11, letterSpacing: "0.15em", color: T.gold, textTransform: "uppercase", fontFamily: "Plus Jakarta Sans, sans-serif" }}>
                 Siniestros históricos ({(client.tesis_claims || []).length})
               </div>
               <button onClick={() => { setTesisClaimForm(emptyTesisClaim); setShowTesisClaimForm(true); }} style={S.btn}>+ Añadir siniestro</button>
@@ -700,21 +705,21 @@ export default function ClientDetail({ client, policies, claims, onRefresh, curr
             {(client.tesis_claims || []).length === 0
               ? <div style={S.empty}>Sin siniestros históricos registrados</div>
               : (client.tesis_claims || []).map((c, i) => (
-                <div key={c.id || i} style={{ background: "var(--card)", border: "0.5px solid var(--border)", borderRadius: 8, padding: "12px 16px", marginBottom: 8 }}>
+                <div key={c.id || i} style={{ background: T.card, border: `0.5px solid ${T.border}`, borderRadius: 8, padding: "12px 16px", marginBottom: 8 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 8 }}>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontFamily: "Plus Jakarta Sans, sans-serif", fontSize: 13, fontWeight: 600, color: "var(--text)" }}>{c.descripcion}</div>
+                      <div style={{ fontFamily: "Plus Jakarta Sans, sans-serif", fontSize: 13, fontWeight: 600, color: T.text }}>{c.descripcion}</div>
                       <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginTop: 6 }}>
                         {c.ramo && <span style={S.meta}>{c.ramo}</span>}
                         {c.aseguradora && <span style={S.meta}>{c.aseguradora}</span>}
                         {c.num_expediente && <span style={S.meta}>Exp: {c.num_expediente}</span>}
                         {c.fecha_siniestro && <span style={S.meta}>{c.fecha_siniestro}</span>}
-                        {c.importe > 0 && <span style={{ ...S.meta, color: "var(--gold)" }}>Indemnización: {c.importe.toLocaleString("es-ES")} €</span>}
+                        {c.importe > 0 && <span style={{ ...S.meta, color: T.gold }}>Indemnización: {c.importe.toLocaleString("es-ES")} €</span>}
                       </div>
-                      {c.resolucion && <div style={{ fontSize: 12, color: "var(--mute)", fontFamily: "Plus Jakarta Sans, sans-serif", marginTop: 6 }}>Resolución: {c.resolucion}</div>}
+                      {c.resolucion && <div style={{ fontSize: 12, color: T.mute, fontFamily: "Plus Jakarta Sans, sans-serif", marginTop: 6 }}>Resolución: {c.resolucion}</div>}
                     </div>
                     <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                      <span style={{ fontSize: 10, padding: "3px 10px", borderRadius: 999, background: "var(--lift)", color: "var(--mute)", fontFamily: "Plus Jakarta Sans, sans-serif" }}>{c.estado}</span>
+                      <span style={{ fontSize: 10, padding: "3px 10px", borderRadius: 999, background: T.lift, color: T.mute, fontFamily: "Plus Jakarta Sans, sans-serif" }}>{c.estado}</span>
                       <button onClick={() => handleDeleteTesisClaim(c.id)} style={{ ...S.iconBtn, color: "#8B3A3A" }}>
                         <Icon d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" size={14} />
                       </button>
@@ -729,14 +734,14 @@ export default function ClientDetail({ client, policies, claims, onRefresh, curr
 
       {/* TAB: Documentos */}
       {tab === "correos" && (
-        <EmailHistory entityType="client" entityId={client.id} />
+        <EmailHistory entityType="client" entityId={client.id} theme={theme} />
       )}
       {tab === "documentos" && (
         <div style={{ display: "flex", flexDirection: "column", gap: 28 }}>
 
           {/* Documentos normales del cliente */}
           <div>
-            <div style={{ fontSize: 11, letterSpacing: "0.15em", color: "var(--mute)", textTransform: "uppercase",
+            <div style={{ fontSize: 11, letterSpacing: "0.15em", color: T.mute, textTransform: "uppercase",
               fontFamily: "Plus Jakarta Sans, sans-serif", marginBottom: 14 }}>
               Documentos del cliente ({documents.length})
             </div>
@@ -752,14 +757,14 @@ export default function ClientDetail({ client, policies, claims, onRefresh, curr
           {isAdmin && (
             <div>
               <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14,
-                paddingTop: 20, borderTop: "0.5px solid var(--border)" }}>
+                paddingTop: 20, borderTop: `0.5px solid ${T.border}` }}>
                 <span style={{ fontSize: 20 }}>🔐</span>
                 <div>
-                  <div style={{ fontSize: 11, letterSpacing: "0.15em", color: "var(--gold)", textTransform: "uppercase",
+                  <div style={{ fontSize: 11, letterSpacing: "0.15em", color: T.gold, textTransform: "uppercase",
                     fontFamily: "Plus Jakarta Sans, sans-serif" }}>
                     Bóveda privada ({vaultDocs.length})
                   </div>
-                  <div style={{ fontSize: 11, color: "var(--mute)", fontFamily: "Plus Jakarta Sans, sans-serif", marginTop: 2 }}>
+                  <div style={{ fontSize: 11, color: T.mute, fontFamily: "Plus Jakarta Sans, sans-serif", marginTop: 2 }}>
                     Contratos, nóminas y documentos sensibles · Solo visible para administradores
                   </div>
                 </div>
@@ -780,11 +785,11 @@ export default function ClientDetail({ client, policies, claims, onRefresh, curr
       {showPolicyForm && (
         <div style={S.overlay} onClick={e => e.target === e.currentTarget && setShowPolicyForm(false)}>
           <div style={S.modal}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20, paddingBottom: 16, borderBottom: "0.5px solid var(--border)" }}>
-              <span style={{ fontSize: 18, fontWeight: 700, color: "var(--text)", fontFamily: "Plus Jakarta Sans, sans-serif" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20, paddingBottom: 16, borderBottom: `0.5px solid ${T.border}` }}>
+              <span style={{ fontSize: 18, fontWeight: 700, color: T.text, fontFamily: "Plus Jakarta Sans, sans-serif" }}>
                 {editPolicyId ? "Editar póliza" : "Nueva póliza"}
               </span>
-              <button onClick={() => setShowPolicyForm(false)} style={{ background: "none", border: "none", color: "var(--mute)", cursor: "pointer", fontSize: 18 }}>✕</button>
+              <button onClick={() => setShowPolicyForm(false)} style={{ background: "none", border: "none", color: T.mute, cursor: "pointer", fontSize: 18 }}>✕</button>
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
@@ -859,11 +864,11 @@ export default function ClientDetail({ client, policies, claims, onRefresh, curr
       {showClaimForm && (
         <div style={S.overlay} onClick={e => e.target === e.currentTarget && setShowClaimForm(false)}>
           <div style={S.modal}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20, paddingBottom: 16, borderBottom: "0.5px solid var(--border)" }}>
-              <span style={{ fontSize: 18, fontWeight: 700, color: "var(--text)", fontFamily: "Plus Jakarta Sans, sans-serif" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20, paddingBottom: 16, borderBottom: `0.5px solid ${T.border}` }}>
+              <span style={{ fontSize: 18, fontWeight: 700, color: T.text, fontFamily: "Plus Jakarta Sans, sans-serif" }}>
                 {editClaimId ? "Editar siniestro" : "Nuevo siniestro"}
               </span>
-              <button onClick={() => setShowClaimForm(false)} style={{ background: "none", border: "none", color: "var(--mute)", cursor: "pointer", fontSize: 18 }}>✕</button>
+              <button onClick={() => setShowClaimForm(false)} style={{ background: "none", border: "none", color: T.mute, cursor: "pointer", fontSize: 18 }}>✕</button>
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
@@ -925,9 +930,9 @@ export default function ClientDetail({ client, policies, claims, onRefresh, curr
       {showTesisPolicyForm && (
         <div style={S.overlay} onClick={e => e.target === e.currentTarget && setShowTesisPolicyForm(false)}>
           <div style={S.modal}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20, paddingBottom: 16, borderBottom: "0.5px solid var(--border)" }}>
-              <span style={{ fontSize: 18, fontWeight: 700, color: "var(--text)", fontFamily: "Plus Jakarta Sans, sans-serif" }}>Póliza histórica (Tesis)</span>
-              <button onClick={() => setShowTesisPolicyForm(false)} style={{ background: "none", border: "none", color: "var(--mute)", cursor: "pointer", fontSize: 18 }}>✕</button>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20, paddingBottom: 16, borderBottom: `0.5px solid ${T.border}` }}>
+              <span style={{ fontSize: 18, fontWeight: 700, color: T.text, fontFamily: "Plus Jakarta Sans, sans-serif" }}>Póliza histórica (Tesis)</span>
+              <button onClick={() => setShowTesisPolicyForm(false)} style={{ background: "none", border: "none", color: T.mute, cursor: "pointer", fontSize: 18 }}>✕</button>
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
@@ -989,9 +994,9 @@ export default function ClientDetail({ client, policies, claims, onRefresh, curr
       {showTesisClaimForm && (
         <div style={S.overlay} onClick={e => e.target === e.currentTarget && setShowTesisClaimForm(false)}>
           <div style={S.modal}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20, paddingBottom: 16, borderBottom: "0.5px solid var(--border)" }}>
-              <span style={{ fontSize: 18, fontWeight: 700, color: "var(--text)", fontFamily: "Plus Jakarta Sans, sans-serif" }}>Siniestro histórico (Tesis)</span>
-              <button onClick={() => setShowTesisClaimForm(false)} style={{ background: "none", border: "none", color: "var(--mute)", cursor: "pointer", fontSize: 18 }}>✕</button>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20, paddingBottom: 16, borderBottom: `0.5px solid ${T.border}` }}>
+              <span style={{ fontSize: 18, fontWeight: 700, color: T.text, fontFamily: "Plus Jakarta Sans, sans-serif" }}>Siniestro histórico (Tesis)</span>
+              <button onClick={() => setShowTesisClaimForm(false)} style={{ background: "none", border: "none", color: T.mute, cursor: "pointer", fontSize: 18 }}>✕</button>
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
@@ -1046,17 +1051,19 @@ export default function ClientDetail({ client, policies, claims, onRefresh, curr
   );
 }
 
-const S = {
-  btn:        { display: "flex", alignItems: "center", gap: 6, padding: "9px 18px", background: "var(--gold)", color: "var(--bgApp)", border: "none", borderRadius: 6, cursor: "pointer", fontSize: 11, fontWeight: 700, fontFamily: "Plus Jakarta Sans, sans-serif", letterSpacing: "0.1em", textTransform: "uppercase" },
-  btnOutline: { padding: "9px 18px", background: "none", color: "var(--gold)", border: "1px solid var(--goldDim)", borderRadius: 6, cursor: "pointer", fontSize: 11, fontFamily: "Plus Jakarta Sans, sans-serif", letterSpacing: "0.1em", textTransform: "uppercase" },
-  iconBtn:    { background: "none", border: "none", color: "var(--mute)", cursor: "pointer", padding: 6, borderRadius: 4, display: "flex", alignItems: "center" },
-  chip:       { padding: "6px 16px", borderRadius: 999, border: "0.5px solid var(--border)", background: "none", color: "var(--textSub)", cursor: "pointer", fontFamily: "Plus Jakarta Sans, sans-serif", fontSize: 10, fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase" },
-  chipActive: { border: "0.5px solid var(--gold)", color: "var(--bgApp)", background: "var(--gold)", fontWeight: 700 },
-  input:      { width: "100%", background: "var(--lift)", border: "0.5px solid var(--border)", color: "var(--text)", padding: "10px 14px", borderRadius: 6, fontFamily: "Plus Jakarta Sans, sans-serif", fontSize: 13, outline: "none", boxSizing: "border-box" },
-  formLabel:  { display: "block", fontSize: 9, letterSpacing: "0.2em", color: "var(--mute)", textTransform: "uppercase", marginBottom: 6, fontFamily: "Plus Jakarta Sans, sans-serif" },
-  meta:       { fontSize: 12, color: "var(--mute)", fontFamily: "Plus Jakarta Sans, sans-serif" },
-  overlay:    { position: "fixed", inset: 0, background: "rgba(0,0,0,0.8)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100 },
-  modal:      { background: "var(--card)", border: "0.5px solid var(--border)", borderRadius: 8, padding: 28, width: "min(520px, 95vw)", maxHeight: "90vh", overflow: "auto" },
-  empty:      { textAlign: "center", color: "var(--mute)", fontSize: 13, fontFamily: "Plus Jakarta Sans, sans-serif", padding: "2rem", letterSpacing: "0.08em" },
-  toast:      { position: "fixed", bottom: 28, left: "50%", transform: "translateX(-50%)", background: "var(--card)", border: "1px solid var(--goldDim)", color: "var(--gold)", padding: "11px 22px", borderRadius: 6, fontSize: 12, fontFamily: "Plus Jakarta Sans, sans-serif", letterSpacing: 1.5, textTransform: "uppercase", zIndex: 200 },
-};
+function getStyles(T) {
+  return {
+    btn:        { display: "flex", alignItems: "center", gap: 6, padding: "9px 18px", background: T.gold, color: T.bgApp, border: "none", borderRadius: 6, cursor: "pointer", fontSize: 11, fontWeight: 700, fontFamily: "Plus Jakarta Sans, sans-serif", letterSpacing: "0.1em", textTransform: "uppercase" },
+    btnOutline: { padding: "9px 18px", background: "none", color: T.gold, border: `1px solid ${T.goldDim}`, borderRadius: 6, cursor: "pointer", fontSize: 11, fontFamily: "Plus Jakarta Sans, sans-serif", letterSpacing: "0.1em", textTransform: "uppercase" },
+    iconBtn:    { background: "none", border: "none", color: T.mute, cursor: "pointer", padding: 6, borderRadius: 4, display: "flex", alignItems: "center" },
+    chip:       { padding: "6px 16px", borderRadius: 999, border: `0.5px solid ${T.border}`, background: "none", color: T.textSub, cursor: "pointer", fontFamily: "Plus Jakarta Sans, sans-serif", fontSize: 10, fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase" },
+    chipActive: { border: `0.5px solid ${T.gold}`, color: T.bgApp, background: T.gold, fontWeight: 700 },
+    input:      { width: "100%", background: T.lift, border: `0.5px solid ${T.border}`, color: T.text, padding: "10px 14px", borderRadius: 6, fontFamily: "Plus Jakarta Sans, sans-serif", fontSize: 13, outline: "none", boxSizing: "border-box" },
+    formLabel:  { display: "block", fontSize: 9, letterSpacing: "0.2em", color: T.mute, textTransform: "uppercase", marginBottom: 6, fontFamily: "Plus Jakarta Sans, sans-serif" },
+    meta:       { fontSize: 12, color: T.mute, fontFamily: "Plus Jakarta Sans, sans-serif" },
+    overlay:    { position: "fixed", inset: 0, background: "rgba(0,0,0,0.8)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100 },
+    modal:      { background: T.card, border: `0.5px solid ${T.border}`, borderRadius: 8, padding: 28, width: "min(520px, 95vw)", maxHeight: "90vh", overflow: "auto" },
+    empty:      { textAlign: "center", color: T.mute, fontSize: 13, fontFamily: "Plus Jakarta Sans, sans-serif", padding: "2rem", letterSpacing: "0.08em" },
+    toast:      { position: "fixed", bottom: 28, left: "50%", transform: "translateX(-50%)", background: T.card, border: `1px solid ${T.goldDim}`, color: T.gold, padding: "11px 22px", borderRadius: 6, fontSize: 12, fontFamily: "Plus Jakarta Sans, sans-serif", letterSpacing: 1.5, textTransform: "uppercase", zIndex: 200 },
+  };
+}

@@ -1,12 +1,16 @@
 import { useState } from "react";
 import { getToken } from "../api";
 import { api } from "../api";
+import { DARK, LIGHT } from "../theme";
 
 const BASE = window.location.hostname === "localhost"
   ? "http://localhost:8002/api"
   : `${window.location.protocol}//${window.location.host}/api`;
 
-export default function AIEmailModal({ onClose, entityType, entityId }) {
+export default function AIEmailModal({ onClose, entityType, entityId, theme }) {
+  const T = theme === "dark" ? DARK : LIGHT;
+  const styles = getStyles(T);
+
   const [contexto, setContexto]   = useState("");
   const [correo, setCorreo]       = useState("");
   const [asunto, setAsunto]       = useState("");
@@ -135,7 +139,7 @@ export default function AIEmailModal({ onClose, entityType, entityId }) {
                 </p>
               )}
               {saving && (
-                <p style={{ fontSize: "0.8rem", color: "var(--mute)", marginTop: "0.4rem" }}>
+                <p style={{ fontSize: "0.8rem", color: T.mute, marginTop: "0.4rem" }}>
                   Guardando en historial...
                 </p>
               )}
@@ -155,17 +159,19 @@ export default function AIEmailModal({ onClose, entityType, entityId }) {
   );
 }
 
-const styles = {
-  overlay:      { position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 },
-  modal:        { background: "var(--card)", border: "1px solid var(--border)", borderRadius: "12px", width: "min(600px, 95vw)", maxHeight: "90vh", overflowY: "auto", boxShadow: "var(--lift)" },
-  header:       { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "1.2rem 1.5rem", borderBottom: "1px solid var(--border)" },
-  titulo:       { fontSize: "1rem", fontWeight: 600, color: "var(--gold)" },
-  cerrar:       { background: "none", border: "none", color: "var(--mute)", fontSize: "1.1rem", cursor: "pointer" },
-  body:         { padding: "1.5rem" },
-  label:        { display: "block", fontSize: "0.82rem", color: "var(--mute)", marginBottom: "0.5rem" },
-  textarea:     { width: "100%", background: "var(--bgApp)", border: "1px solid var(--border)", borderRadius: "8px", color: "var(--text)", padding: "0.75rem", fontSize: "0.88rem", resize: "vertical", fontFamily: "Plus Jakarta Sans, sans-serif", boxSizing: "border-box" },
-  btnGenerar:   { marginTop: "1rem", width: "100%", padding: "0.75rem", background: "var(--gold)", color: "#000", border: "none", borderRadius: "8px", fontWeight: 700, fontSize: "0.9rem", cursor: "pointer" },
-  error:        { color: "#e05", fontSize: "0.85rem", marginTop: "0.5rem" },
-  acciones:     { display: "flex", gap: "0.75rem", marginTop: "0.75rem" },
-  btnSecundario:{ flex: 1, padding: "0.65rem", background: "var(--bgApp)", border: "1px solid var(--border)", borderRadius: "8px", color: "var(--text)", fontSize: "0.85rem", cursor: "pointer" },
-};
+function getStyles(T) {
+  return {
+    overlay:      { position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 },
+    modal:        { background: T.card, border: `1px solid ${T.border}`, borderRadius: "12px", width: "min(600px, 95vw)", maxHeight: "90vh", overflowY: "auto", boxShadow: T.lift },
+    header:       { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "1.2rem 1.5rem", borderBottom: `1px solid ${T.border}` },
+    titulo:       { fontSize: "1rem", fontWeight: 600, color: T.gold },
+    cerrar:       { background: "none", border: "none", color: T.mute, fontSize: "1.1rem", cursor: "pointer" },
+    body:         { padding: "1.5rem" },
+    label:        { display: "block", fontSize: "0.82rem", color: T.mute, marginBottom: "0.5rem" },
+    textarea:     { width: "100%", background: T.bgApp, border: `1px solid ${T.border}`, borderRadius: "8px", color: T.text, padding: "0.75rem", fontSize: "0.88rem", resize: "vertical", fontFamily: "Plus Jakarta Sans, sans-serif", boxSizing: "border-box" },
+    btnGenerar:   { marginTop: "1rem", width: "100%", padding: "0.75rem", background: T.gold, color: "#000", border: "none", borderRadius: "8px", fontWeight: 700, fontSize: "0.9rem", cursor: "pointer" },
+    error:        { color: "#e05", fontSize: "0.85rem", marginTop: "0.5rem" },
+    acciones:     { display: "flex", gap: "0.75rem", marginTop: "0.75rem" },
+    btnSecundario:{ flex: 1, padding: "0.65rem", background: T.bgApp, border: `1px solid ${T.border}`, borderRadius: "8px", color: T.text, fontSize: "0.85rem", cursor: "pointer" },
+  };
+}

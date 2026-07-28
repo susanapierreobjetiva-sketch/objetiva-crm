@@ -3,6 +3,7 @@ import { api } from "../api";
 import ConfirmModal from "./ConfirmModal";
 import AIEmailModal from "./AIEmailModal";
 import EmailHistory from "./EmailHistory";
+import { DARK, LIGHT } from "../theme";
 
 const ESTADO_COLORS = {
   "Abierto":    { bg: "#1A0A0A", color: "#E08080" },
@@ -12,7 +13,10 @@ const ESTADO_COLORS = {
 
 const RAMOS = ["Hogar","Auto","Vida","Salud","Empresa","Responsabilidad Civil","Decesos","Viaje","Comunidades","Otros"];
 
-export default function ClaimDetail({ claim, client, onBack, onRefresh, currentUser }) {
+export default function ClaimDetail({ claim, client, onBack, onRefresh, currentUser, theme }) {
+  const T = theme === "dark" ? DARK : LIGHT;
+  const S = getStyles(T);
+
   const [editing, setEditing]         = useState(false);
   const [saving, setSaving]           = useState(false);
   const [toast, setToast]             = useState("");
@@ -65,7 +69,7 @@ export default function ClaimDetail({ claim, client, onBack, onRefresh, currentU
     });
   };
 
-  const estados = ESTADO_COLORS[claim.estado] || { bg: "var(--lift)", color: "var(--mute)" };
+  const estados = ESTADO_COLORS[claim.estado] || { bg: T.lift, color: T.mute };
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
@@ -78,30 +82,31 @@ export default function ClaimDetail({ claim, client, onBack, onRefresh, currentU
           confirmLabel="Sí, eliminar"
           onConfirm={confirmModal.onConfirm}
           onCancel={() => setConfirmModal(null)}
+          theme={theme}
         />
       )}
-      {showAIEmail && <AIEmailModal onClose={() => setShowAIEmail(false)} entityType="claim" entityId={claim.id} />}
+      {showAIEmail && <AIEmailModal onClose={() => setShowAIEmail(false)} entityType="claim" entityId={claim.id} theme={theme} />}
 
       <button onClick={onBack} style={S.back}>← Volver a siniestros</button>
 
       {/* Cabecera */}
-      <div style={{ background: "var(--card)", border: "0.5px solid var(--border)", borderRadius: 8, padding: "20px 24px" }}>
+      <div style={{ background: T.card, border: `0.5px solid ${T.border}`, borderRadius: 8, padding: "20px 24px" }}>
         <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 11, letterSpacing: "0.15em", color: "var(--gold)", textTransform: "uppercase",
+            <div style={{ fontSize: 11, letterSpacing: "0.15em", color: T.gold, textTransform: "uppercase",
               fontFamily: "Plus Jakarta Sans, sans-serif", marginBottom: 6 }}>Siniestro</div>
-            <div style={{ fontSize: 20, fontWeight: 700, color: "var(--text)", fontFamily: "Plus Jakarta Sans, sans-serif" }}>
+            <div style={{ fontSize: 20, fontWeight: 700, color: T.text, fontFamily: "Plus Jakarta Sans, sans-serif" }}>
               {claim.descripcion}
             </div>
-            <div style={{ fontSize: 13, color: "var(--mute)", fontFamily: "Plus Jakarta Sans, sans-serif", marginTop: 4 }}>
-              Cliente: <span style={{ color: "var(--gold)" }}>{client?.name || "—"}</span>
+            <div style={{ fontSize: 13, color: T.mute, fontFamily: "Plus Jakarta Sans, sans-serif", marginTop: 4 }}>
+              Cliente: <span style={{ color: T.gold }}>{client?.name || "—"}</span>
             </div>
             <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 10 }}>
               {claim.ramo         && <span style={S.meta}>{claim.ramo}</span>}
               {claim.aseguradora  && <span style={S.meta}>{claim.aseguradora}</span>}
               {claim.num_expediente && <span style={S.meta}>Exp: {claim.num_expediente}</span>}
               {claim.fecha_siniestro && <span style={S.meta}>📅 {claim.fecha_siniestro}</span>}
-              {claim.importe > 0  && <span style={{ ...S.meta, color: "var(--gold)" }}>{claim.importe.toLocaleString("es-ES")} €</span>}
+              {claim.importe > 0  && <span style={{ ...S.meta, color: T.gold }}>{claim.importe.toLocaleString("es-ES")} €</span>}
             </div>
           </div>
           <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 10 }}>
@@ -125,7 +130,7 @@ export default function ClaimDetail({ claim, client, onBack, onRefresh, currentU
 
       {/* Formulario edición */}
       {editing && (
-        <div style={{ background: "var(--card)", border: "0.5px solid var(--border)", borderRadius: 8, padding: "20px 24px" }}>
+        <div style={{ background: T.card, border: `0.5px solid ${T.border}`, borderRadius: 8, padding: "20px 24px" }}>
           <div style={S.sectionTitle}>Editar siniestro</div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 14, marginTop: 14 }}>
             <div>
@@ -155,7 +160,7 @@ export default function ClaimDetail({ claim, client, onBack, onRefresh, currentU
           </div>
           <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 16 }}>
             <button onClick={handleSave} disabled={saving}
-              style={{ ...S.btnOutline, background: "var(--gold)", color: "#000", border: "none", fontWeight: 700, opacity: saving ? 0.6 : 1 }}>
+              style={{ ...S.btnOutline, background: T.gold, color: "#000", border: "none", fontWeight: 700, opacity: saving ? 0.6 : 1 }}>
               {saving ? "Guardando..." : "💾 Guardar cambios"}
             </button>
           </div>
@@ -164,11 +169,11 @@ export default function ClaimDetail({ claim, client, onBack, onRefresh, currentU
 
       {/* Resolución y notas */}
       {(claim.resolucion || claim.notas) && (
-        <div style={{ background: "var(--card)", border: "0.5px solid var(--border)", borderRadius: 8, padding: "20px 24px", display: "flex", flexDirection: "column", gap: 14 }}>
+        <div style={{ background: T.card, border: `0.5px solid ${T.border}`, borderRadius: 8, padding: "20px 24px", display: "flex", flexDirection: "column", gap: 14 }}>
           {claim.resolucion && (
             <div>
               <div style={S.sectionTitle}>Resolución</div>
-              <div style={{ fontSize: 13, color: "var(--text)", fontFamily: "Plus Jakarta Sans, sans-serif", marginTop: 8, lineHeight: 1.6 }}>
+              <div style={{ fontSize: 13, color: T.text, fontFamily: "Plus Jakarta Sans, sans-serif", marginTop: 8, lineHeight: 1.6 }}>
                 {claim.resolucion}
               </div>
             </div>
@@ -176,42 +181,44 @@ export default function ClaimDetail({ claim, client, onBack, onRefresh, currentU
           {claim.notas && (
             <div>
               <div style={S.sectionTitle}>Notas</div>
-              <div style={{ fontSize: 13, color: "var(--text)", fontFamily: "Plus Jakarta Sans, sans-serif", marginTop: 8, lineHeight: 1.6 }}>
+              <div style={{ fontSize: 13, color: T.text, fontFamily: "Plus Jakarta Sans, sans-serif", marginTop: 8, lineHeight: 1.6 }}>
                 {claim.notas}
               </div>
             </div>
           )}
         </div>
       )}
-      <EmailHistory entityType="claim" entityId={claim.id} />
+      <EmailHistory entityType="claim" entityId={claim.id} theme={theme} />
     </div>
   );
 }
 
-const S = {
-  back:        { background: "none", border: "none", color: "var(--goldDim)", cursor: "pointer",
-                 fontFamily: "Plus Jakarta Sans, sans-serif", fontSize: 11, letterSpacing: "0.12em",
-                 textTransform: "uppercase", padding: 0, display: "flex", alignItems: "center", gap: 6 },
-  meta:        { fontSize: 12, color: "var(--mute)", fontFamily: "Plus Jakarta Sans, sans-serif",
-                 background: "var(--lift)", padding: "3px 10px", borderRadius: 999 },
-  sectionTitle:{ fontSize: 10, letterSpacing: "0.15em", color: "var(--gold)", textTransform: "uppercase",
-                 fontFamily: "Plus Jakarta Sans, sans-serif" },
-  label:       { fontSize: 10, letterSpacing: "0.12em", color: "var(--mute)", textTransform: "uppercase",
-                 fontFamily: "Plus Jakarta Sans, sans-serif", marginBottom: 5 },
-  input:       { width: "100%", background: "var(--bgApp)", border: "0.5px solid var(--border)",
-                 borderRadius: 6, color: "var(--text)", padding: "8px 12px",
-                 fontFamily: "Plus Jakarta Sans, sans-serif", fontSize: 13, outline: "none", boxSizing: "border-box" },
-  btnOutline:  { padding: "7px 16px", borderRadius: 6, border: "0.5px solid var(--goldDim)",
-                 background: "none", color: "var(--gold)", cursor: "pointer",
-                 fontFamily: "Plus Jakarta Sans, sans-serif", fontSize: 12, fontWeight: 600 },
-  btnDanger:   { padding: "7px 16px", borderRadius: 6, border: "0.5px solid #8B3A3A",
-                 background: "none", color: "#E08080", cursor: "pointer",
-                 fontFamily: "Plus Jakarta Sans, sans-serif", fontSize: 12, fontWeight: 600 },
-  btnAI:       { padding: "7px 16px", borderRadius: 6, border: "1px solid var(--goldDim)",
-                 background: "var(--lift)", color: "var(--gold)", cursor: "pointer",
-                 fontFamily: "Plus Jakarta Sans, sans-serif", fontSize: 12, fontWeight: 600 },
-  toast:       { position: "fixed", bottom: 28, left: "50%", transform: "translateX(-50%)",
-                 background: "var(--card)", border: "1px solid var(--goldDim)", color: "var(--gold)",
-                 padding: "11px 22px", borderRadius: 6, fontSize: 12, fontFamily: "Plus Jakarta Sans, sans-serif",
-                 letterSpacing: 1.5, textTransform: "uppercase", zIndex: 200 },
-};
+function getStyles(T) {
+  return {
+    back:        { background: "none", border: "none", color: T.goldDim, cursor: "pointer",
+                   fontFamily: "Plus Jakarta Sans, sans-serif", fontSize: 11, letterSpacing: "0.12em",
+                   textTransform: "uppercase", padding: 0, display: "flex", alignItems: "center", gap: 6 },
+    meta:        { fontSize: 12, color: T.mute, fontFamily: "Plus Jakarta Sans, sans-serif",
+                   background: T.lift, padding: "3px 10px", borderRadius: 999 },
+    sectionTitle:{ fontSize: 10, letterSpacing: "0.15em", color: T.gold, textTransform: "uppercase",
+                   fontFamily: "Plus Jakarta Sans, sans-serif" },
+    label:       { fontSize: 10, letterSpacing: "0.12em", color: T.mute, textTransform: "uppercase",
+                   fontFamily: "Plus Jakarta Sans, sans-serif", marginBottom: 5 },
+    input:       { width: "100%", background: T.bgApp, border: `0.5px solid ${T.border}`,
+                   borderRadius: 6, color: T.text, padding: "8px 12px",
+                   fontFamily: "Plus Jakarta Sans, sans-serif", fontSize: 13, outline: "none", boxSizing: "border-box" },
+    btnOutline:  { padding: "7px 16px", borderRadius: 6, border: `0.5px solid ${T.goldDim}`,
+                   background: "none", color: T.gold, cursor: "pointer",
+                   fontFamily: "Plus Jakarta Sans, sans-serif", fontSize: 12, fontWeight: 600 },
+    btnDanger:   { padding: "7px 16px", borderRadius: 6, border: "0.5px solid #8B3A3A",
+                   background: "none", color: "#E08080", cursor: "pointer",
+                   fontFamily: "Plus Jakarta Sans, sans-serif", fontSize: 12, fontWeight: 600 },
+    btnAI:       { padding: "7px 16px", borderRadius: 6, border: `1px solid ${T.goldDim}`,
+                   background: T.lift, color: T.gold, cursor: "pointer",
+                   fontFamily: "Plus Jakarta Sans, sans-serif", fontSize: 12, fontWeight: 600 },
+    toast:       { position: "fixed", bottom: 28, left: "50%", transform: "translateX(-50%)",
+                   background: T.card, border: `1px solid ${T.goldDim}`, color: T.gold,
+                   padding: "11px 22px", borderRadius: 6, fontSize: 12, fontFamily: "Plus Jakarta Sans, sans-serif",
+                   letterSpacing: 1.5, textTransform: "uppercase", zIndex: 200 },
+  };
+}

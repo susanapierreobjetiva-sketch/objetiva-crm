@@ -1,7 +1,11 @@
 import { useState, useEffect } from "react";
 import { api } from "../api";
+import { DARK, LIGHT } from "../theme";
 
-export default function EmailHistory({ entityType, entityId }) {
+export default function EmailHistory({ entityType, entityId, theme }) {
+  const T = theme === "dark" ? DARK : LIGHT;
+  const S = getStyles(T);
+
   const [emails, setEmails]       = useState([]);
   const [loading, setLoading]     = useState(true);
   const [expanded, setExpanded]   = useState(null);
@@ -116,19 +120,21 @@ export default function EmailHistory({ entityType, entityId }) {
   );
 }
 
-const S = {
-  sectionTitle: { fontSize: 10, letterSpacing: "0.15em", color: "var(--gold)", textTransform: "uppercase", fontFamily: "Plus Jakarta Sans, sans-serif" },
-  label:        { fontSize: 10, letterSpacing: "0.12em", color: "var(--mute)", textTransform: "uppercase", fontFamily: "Plus Jakarta Sans, sans-serif", marginBottom: 5 },
-  input:        { width: "100%", background: "var(--bgApp)", border: "0.5px solid var(--border)", borderRadius: 6, color: "var(--text)", padding: "8px 12px", fontFamily: "Plus Jakarta Sans, sans-serif", fontSize: 13, outline: "none", boxSizing: "border-box" },
-  formBox:      { background: "var(--card)", border: "0.5px solid var(--border)", borderRadius: 8, padding: "16px 20px" },
-  btnOutline:   { padding: "6px 14px", borderRadius: 6, border: "0.5px solid var(--goldDim)", background: "none", color: "var(--gold)", cursor: "pointer", fontFamily: "Plus Jakarta Sans, sans-serif", fontSize: 11, fontWeight: 600 },
-  btnGuardar:   { padding: "8px 20px", borderRadius: 6, background: "var(--gold)", color: "#000", border: "none", cursor: "pointer", fontFamily: "Plus Jakarta Sans, sans-serif", fontSize: 12, fontWeight: 700 },
-  btnIcon:      { background: "none", border: "none", color: "var(--mute)", cursor: "pointer", fontSize: 13, padding: "4px 6px" },
-  card:         { background: "var(--card)", border: "0.5px solid var(--border)", borderRadius: 8, padding: "14px 16px" },
-  asunto:       { fontSize: 14, fontWeight: 600, color: "var(--text)", fontFamily: "Plus Jakarta Sans, sans-serif", marginBottom: 4 },
-  resumen:      { fontSize: 13, color: "var(--mute)", fontFamily: "Plus Jakarta Sans, sans-serif", marginBottom: 6 },
-  meta:         { fontSize: 11, color: "var(--mute)", fontFamily: "Plus Jakarta Sans, sans-serif" },
-  cuerpo:       { marginTop: 12, padding: "12px", background: "var(--bgApp)", borderRadius: 6, fontSize: 12, color: "var(--text)", fontFamily: "Plus Jakarta Sans, sans-serif", whiteSpace: "pre-wrap", lineHeight: 1.6 },
-  empty:        { textAlign: "center", color: "var(--mute)", fontSize: 13, fontFamily: "Plus Jakarta Sans, sans-serif", padding: "2rem", letterSpacing: "0.08em" },
-  toast:        { position: "fixed", bottom: 28, left: "50%", transform: "translateX(-50%)", background: "var(--card)", border: "1px solid var(--goldDim)", color: "var(--gold)", padding: "11px 22px", borderRadius: 6, fontSize: 12, fontFamily: "Plus Jakarta Sans, sans-serif", letterSpacing: 1.5, textTransform: "uppercase", zIndex: 200 },
-};
+function getStyles(T) {
+  return {
+    sectionTitle: { fontSize: 10, letterSpacing: "0.15em", color: T.gold, textTransform: "uppercase", fontFamily: "Plus Jakarta Sans, sans-serif" },
+    label:        { fontSize: 10, letterSpacing: "0.12em", color: T.mute, textTransform: "uppercase", fontFamily: "Plus Jakarta Sans, sans-serif", marginBottom: 5 },
+    input:        { width: "100%", background: T.bgApp, border: `0.5px solid ${T.border}`, borderRadius: 6, color: T.text, padding: "8px 12px", fontFamily: "Plus Jakarta Sans, sans-serif", fontSize: 13, outline: "none", boxSizing: "border-box" },
+    formBox:      { background: T.card, border: `0.5px solid ${T.border}`, borderRadius: 8, padding: "16px 20px" },
+    btnOutline:   { padding: "6px 14px", borderRadius: 6, border: `0.5px solid ${T.goldDim}`, background: "none", color: T.gold, cursor: "pointer", fontFamily: "Plus Jakarta Sans, sans-serif", fontSize: 11, fontWeight: 600 },
+    btnGuardar:   { padding: "8px 20px", borderRadius: 6, background: T.gold, color: "#000", border: "none", cursor: "pointer", fontFamily: "Plus Jakarta Sans, sans-serif", fontSize: 12, fontWeight: 700 },
+    btnIcon:      { background: "none", border: "none", color: T.mute, cursor: "pointer", fontSize: 13, padding: "4px 6px" },
+    card:         { background: T.card, border: `0.5px solid ${T.border}`, borderRadius: 8, padding: "14px 16px" },
+    asunto:       { fontSize: 14, fontWeight: 600, color: T.text, fontFamily: "Plus Jakarta Sans, sans-serif", marginBottom: 4 },
+    resumen:      { fontSize: 13, color: T.mute, fontFamily: "Plus Jakarta Sans, sans-serif", marginBottom: 6 },
+    meta:         { fontSize: 11, color: T.mute, fontFamily: "Plus Jakarta Sans, sans-serif" },
+    cuerpo:       { marginTop: 12, padding: "12px", background: T.bgApp, borderRadius: 6, fontSize: 12, color: T.text, fontFamily: "Plus Jakarta Sans, sans-serif", whiteSpace: "pre-wrap", lineHeight: 1.6 },
+    empty:        { textAlign: "center", color: T.mute, fontSize: 13, fontFamily: "Plus Jakarta Sans, sans-serif", padding: "2rem", letterSpacing: "0.08em" },
+    toast:        { position: "fixed", bottom: 28, left: "50%", transform: "translateX(-50%)", background: T.card, border: `1px solid ${T.goldDim}`, color: T.gold, padding: "11px 22px", borderRadius: 6, fontSize: 12, fontFamily: "Plus Jakarta Sans, sans-serif", letterSpacing: 1.5, textTransform: "uppercase", zIndex: 200 },
+  };
+}

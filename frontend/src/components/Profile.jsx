@@ -1,7 +1,10 @@
 import { useState } from "react";
 import { api } from "../api";
+import { DARK, LIGHT } from "../theme";
 
 export default function Profile({ currentUser, theme, onToggleTheme, onUpdate }) {
+  const T0 = theme === "dark" ? DARK : LIGHT;
+
   const [section, setSection]   = useState("personal");
   const [toast, setToast]       = useState("");
   const [loading, setLoading]   = useState(false);
@@ -26,25 +29,25 @@ export default function Profile({ currentUser, theme, onToggleTheme, onUpdate })
   const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(""), 3000); };
 
   const T = {
-    card:    "var(--card)",
-    border:  "var(--border)",
-    gold:    "var(--gold)",
-    text:    "var(--text)",
-    mute:    "var(--mute)",
-    lift:    "var(--lift)",
-    input:   { width: "100%", background: "var(--lift)", border: "0.5px solid var(--border)",
-               color: "var(--text)", padding: "12px 16px", borderRadius: 6,
+    card:    T0.card,
+    border:  T0.border,
+    gold:    T0.gold,
+    text:    T0.text,
+    mute:    T0.mute,
+    lift:    T0.lift,
+    input:   { width: "100%", background: T0.lift, border: `0.5px solid ${T0.border}`,
+               color: T0.text, padding: "12px 16px", borderRadius: 6,
                fontFamily: "Plus Jakarta Sans, sans-serif", fontSize: 14,
                outline: "none", boxSizing: "border-box" },
-    label:   { display: "block", fontSize: 11, letterSpacing: "0.15em", color: "var(--mute)",
+    label:   { display: "block", fontSize: 11, letterSpacing: "0.15em", color: T0.mute,
                textTransform: "uppercase", marginBottom: 8,
                fontFamily: "Plus Jakarta Sans, sans-serif" },
-    btn:     { padding: "12px 24px", background: "var(--gold)", color: "var(--bgApp)",
+    btn:     { padding: "12px 24px", background: T0.gold, color: T0.bgApp,
                border: "none", borderRadius: 6, cursor: "pointer",
                fontFamily: "Plus Jakarta Sans, sans-serif", fontSize: 11,
                fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase" },
-    btnOut:  { padding: "12px 24px", background: "none", color: "var(--gold)",
-               border: "0.5px solid var(--goldDim)", borderRadius: 6, cursor: "pointer",
+    btnOut:  { padding: "12px 24px", background: "none", color: T0.gold,
+               border: `0.5px solid ${T0.goldDim}`, borderRadius: 6, cursor: "pointer",
                fontFamily: "Plus Jakarta Sans, sans-serif", fontSize: 11,
                letterSpacing: "0.15em", textTransform: "uppercase" },
   };
@@ -119,7 +122,7 @@ export default function Profile({ currentUser, theme, onToggleTheme, onUpdate })
     <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
       {toast && (
         <div style={{ position: "fixed", bottom: 28, left: "50%", transform: "translateX(-50%)",
-          background: "var(--card)", border: "1px solid var(--goldDim)", color: "var(--gold)",
+          background: T0.card, border: `1px solid ${T0.goldDim}`, color: T0.gold,
           padding: "11px 22px", borderRadius: 6, fontSize: 12, zIndex: 200,
           fontFamily: "Plus Jakarta Sans, sans-serif", letterSpacing: 1.5, textTransform: "uppercase" }}>
           {toast}
@@ -127,27 +130,27 @@ export default function Profile({ currentUser, theme, onToggleTheme, onUpdate })
       )}
 
       <div>
-        <div style={{ fontSize: 13, letterSpacing: "0.2em", color: "var(--gold)",
+        <div style={{ fontSize: 13, letterSpacing: "0.2em", color: T0.gold,
           textTransform: "uppercase", marginBottom: 8, fontFamily: "Plus Jakarta Sans, sans-serif" }}>
           Cuenta
         </div>
-        <h1 style={{ fontSize: 40, fontWeight: 700, color: "var(--text)", margin: 0,
+        <h1 style={{ fontSize: 40, fontWeight: 700, color: T0.text, margin: 0,
           fontFamily: "Plus Jakarta Sans, sans-serif" }}>Mi Perfil</h1>
       </div>
 
       {/* Avatar + info */}
-      <div style={{ background: "var(--card)", border: "0.5px solid var(--border)",
+      <div style={{ background: T0.card, border: `0.5px solid ${T0.border}`,
         borderRadius: 8, padding: "20px 24px", display: "flex", alignItems: "center", gap: 16 }}>
-        <div style={{ width: 56, height: 56, borderRadius: "50%", background: "var(--lift)",
-          border: "2px solid var(--goldDim)", display: "flex", alignItems: "center",
+        <div style={{ width: 56, height: 56, borderRadius: "50%", background: T0.lift,
+          border: `2px solid ${T0.goldDim}`, display: "flex", alignItems: "center",
           justifyContent: "center", fontSize: 20, fontWeight: 700,
-          color: currentUser.color || "var(--gold)", flexShrink: 0 }}>
+          color: currentUser.color || T0.gold, flexShrink: 0 }}>
           {currentUser.avatar}
         </div>
         <div>
-          <div style={{ fontSize: 18, fontWeight: 700, color: "var(--text)",
+          <div style={{ fontSize: 18, fontWeight: 700, color: T0.text,
             fontFamily: "Plus Jakarta Sans, sans-serif" }}>{currentUser.name}</div>
-          <div style={{ fontSize: 13, color: "var(--mute)", fontFamily: "Plus Jakarta Sans, sans-serif",
+          <div style={{ fontSize: 13, color: T0.mute, fontFamily: "Plus Jakarta Sans, sans-serif",
             marginTop: 2 }}>{currentUser.email} · {currentUser.role}</div>
           {currentUser.totp_enabled && (
             <div style={{ fontSize: 11, color: "#27ae60", fontFamily: "Plus Jakarta Sans, sans-serif",
@@ -163,9 +166,9 @@ export default function Profile({ currentUser, theme, onToggleTheme, onUpdate })
             style={{ padding: "8px 18px", borderRadius: 999, cursor: "pointer",
               fontFamily: "Plus Jakarta Sans, sans-serif", fontSize: 11,
               fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase",
-              border: section === s.id ? "0.5px solid var(--gold)" : "0.5px solid var(--border)",
-              background: section === s.id ? "var(--gold)" : "none",
-              color: section === s.id ? "var(--bgApp)" : "var(--textSub)" }}>
+              border: section === s.id ? `0.5px solid ${T0.gold}` : `0.5px solid ${T0.border}`,
+              background: section === s.id ? T0.gold : "none",
+              color: section === s.id ? T0.bgApp : T0.textSub }}>
             {s.label}
           </button>
         ))}
@@ -173,9 +176,9 @@ export default function Profile({ currentUser, theme, onToggleTheme, onUpdate })
 
       {/* Personal */}
       {section === "personal" && (
-        <div style={{ background: "var(--card)", border: "0.5px solid var(--border)",
+        <div style={{ background: T0.card, border: `0.5px solid ${T0.border}`,
           borderRadius: 8, padding: 24, display: "flex", flexDirection: "column", gap: 16 }}>
-          <div style={{ fontSize: 14, fontWeight: 600, color: "var(--gold)",
+          <div style={{ fontSize: 14, fontWeight: 600, color: T0.gold,
             fontFamily: "Plus Jakarta Sans, sans-serif", marginBottom: 4 }}>Información personal</div>
           <div>
             <label style={T.label}>Nombre completo</label>
@@ -203,9 +206,9 @@ export default function Profile({ currentUser, theme, onToggleTheme, onUpdate })
 
       {/* Contraseña */}
       {section === "password" && (
-        <div style={{ background: "var(--card)", border: "0.5px solid var(--border)",
+        <div style={{ background: T0.card, border: `0.5px solid ${T0.border}`,
           borderRadius: 8, padding: 24, display: "flex", flexDirection: "column", gap: 16 }}>
-          <div style={{ fontSize: 14, fontWeight: 600, color: "var(--gold)",
+          <div style={{ fontSize: 14, fontWeight: 600, color: T0.gold,
             fontFamily: "Plus Jakarta Sans, sans-serif", marginBottom: 4 }}>Cambiar contraseña</div>
           <div>
             <label style={T.label}>Contraseña actual</label>
@@ -220,7 +223,7 @@ export default function Profile({ currentUser, theme, onToggleTheme, onUpdate })
             <input type="password" value={pwdRepeat} onChange={e => setPwdRepeat(e.target.value)}
               onKeyDown={e => e.key === "Enter" && handleChangePassword()} style={T.input} />
           </div>
-          <div style={{ fontSize: 12, color: "var(--mute)", fontFamily: "Plus Jakarta Sans, sans-serif" }}>
+          <div style={{ fontSize: 12, color: T0.mute, fontFamily: "Plus Jakarta Sans, sans-serif" }}>
             Mínimo 8 caracteres. Usa mayúsculas, números y símbolos para mayor seguridad.
           </div>
           <button onClick={handleChangePassword} disabled={loading} style={T.btn}>
@@ -231,14 +234,14 @@ export default function Profile({ currentUser, theme, onToggleTheme, onUpdate })
 
       {/* 2FA */}
       {section === "2fa" && (
-        <div style={{ background: "var(--card)", border: "0.5px solid var(--border)",
+        <div style={{ background: T0.card, border: `0.5px solid ${T0.border}`,
           borderRadius: 8, padding: 24, display: "flex", flexDirection: "column", gap: 20 }}>
-          <div style={{ fontSize: 14, fontWeight: 600, color: "var(--gold)",
+          <div style={{ fontSize: 14, fontWeight: 600, color: T0.gold,
             fontFamily: "Plus Jakarta Sans, sans-serif" }}>Autenticación en dos factores</div>
 
           {!currentUser.totp_enabled && step2fa === "idle" && (
             <>
-              <div style={{ fontSize: 14, color: "var(--mute)", fontFamily: "Plus Jakarta Sans, sans-serif",
+              <div style={{ fontSize: 14, color: T0.mute, fontFamily: "Plus Jakarta Sans, sans-serif",
                 lineHeight: 1.7 }}>
                 El 2FA añade una capa extra de seguridad. Cada vez que inicies sesión necesitarás
                 introducir un código de 6 dígitos generado por Google Authenticator.
@@ -251,7 +254,7 @@ export default function Profile({ currentUser, theme, onToggleTheme, onUpdate })
 
           {step2fa === "setup" && (
             <>
-              <div style={{ fontSize: 14, color: "var(--text)", fontFamily: "Plus Jakarta Sans, sans-serif",
+              <div style={{ fontSize: 14, color: T0.text, fontFamily: "Plus Jakarta Sans, sans-serif",
                 lineHeight: 1.7 }}>
                 1. Instala <strong>Google Authenticator</strong> en tu móvil<br/>
                 2. Escanea el código QR con la app<br/>
@@ -261,9 +264,9 @@ export default function Profile({ currentUser, theme, onToggleTheme, onUpdate })
                 <div style={{ textAlign: "center" }}>
                   <img src={`data:image/png;base64,${qrCode}`} alt="QR 2FA"
                     style={{ width: 200, height: 200, border: "4px solid white", borderRadius: 8 }} />
-                  <div style={{ fontSize: 11, color: "var(--mute)", marginTop: 12,
+                  <div style={{ fontSize: 11, color: T0.mute, marginTop: 12,
                     fontFamily: "Plus Jakarta Sans, sans-serif", letterSpacing: "0.08em" }}>
-                    Clave manual: <code style={{ color: "var(--gold)" }}>{secret2fa}</code>
+                    Clave manual: <code style={{ color: T0.gold }}>{secret2fa}</code>
                   </div>
                 </div>
               )}
@@ -290,15 +293,15 @@ export default function Profile({ currentUser, theme, onToggleTheme, onUpdate })
                 borderRadius: 8, padding: 20 }}>
                 <div style={{ fontSize: 13, color: "#27ae60", fontFamily: "Plus Jakarta Sans, sans-serif",
                   fontWeight: 600, marginBottom: 12 }}>✅ 2FA activado correctamente</div>
-                <div style={{ fontSize: 13, color: "var(--text)", fontFamily: "Plus Jakarta Sans, sans-serif",
+                <div style={{ fontSize: 13, color: T0.text, fontFamily: "Plus Jakarta Sans, sans-serif",
                   marginBottom: 16, lineHeight: 1.6 }}>
                   Guarda estos códigos de backup en un lugar seguro. Los necesitarás si pierdes el móvil.
                 </div>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
                   {backupCodes.map((code, i) => (
-                    <div key={i} style={{ background: "var(--lift)", padding: "8px 12px",
+                    <div key={i} style={{ background: T0.lift, padding: "8px 12px",
                       borderRadius: 6, fontFamily: "monospace", fontSize: 14,
-                      color: "var(--gold)", letterSpacing: "0.1em", textAlign: "center" }}>
+                      color: T0.gold, letterSpacing: "0.1em", textAlign: "center" }}>
                       {code}
                     </div>
                   ))}
@@ -333,18 +336,18 @@ export default function Profile({ currentUser, theme, onToggleTheme, onUpdate })
 
       {/* Preferencias */}
       {section === "preferences" && (
-        <div style={{ background: "var(--card)", border: "0.5px solid var(--border)",
+        <div style={{ background: T0.card, border: `0.5px solid ${T0.border}`,
           borderRadius: 8, padding: 24, display: "flex", flexDirection: "column", gap: 20 }}>
-          <div style={{ fontSize: 14, fontWeight: 600, color: "var(--gold)",
+          <div style={{ fontSize: 14, fontWeight: 600, color: T0.gold,
             fontFamily: "Plus Jakarta Sans, sans-serif" }}>Preferencias de apariencia</div>
 
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center",
-            padding: "16px 20px", background: "var(--lift)", borderRadius: 8,
-            border: "0.5px solid var(--border)" }}>
+            padding: "16px 20px", background: T0.lift, borderRadius: 8,
+            border: `0.5px solid ${T0.border}` }}>
             <div>
-              <div style={{ fontSize: 15, color: "var(--text)", fontFamily: "Plus Jakarta Sans, sans-serif",
+              <div style={{ fontSize: 15, color: T0.text, fontFamily: "Plus Jakarta Sans, sans-serif",
                 fontWeight: 500 }}>Tema de la interfaz</div>
-              <div style={{ fontSize: 13, color: "var(--mute)", fontFamily: "Plus Jakarta Sans, sans-serif",
+              <div style={{ fontSize: 13, color: T0.mute, fontFamily: "Plus Jakarta Sans, sans-serif",
                 marginTop: 2 }}>Actualmente: {theme === "dark" ? "Modo oscuro" : "Modo claro"}</div>
             </div>
             <button onClick={onToggleTheme}

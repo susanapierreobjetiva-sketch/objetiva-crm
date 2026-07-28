@@ -1,9 +1,9 @@
 import { useState, useEffect } from "react";
 import { api } from "../api";
 import ConfirmModal from "./ConfirmModal";
+import { DARK, LIGHT } from "../theme";
 
 const PRIORITY_COLORS = { "Alta": "#E08080", "Normal": "#C9A870", "Baja": "#7A9E7E" };
-const ESTADO_COLORS   = { "Pendiente": "var(--gold)", "Completada": "#27ae60", "Cancelada": "#E08080" };
 const ESTADOS_GESTION = ["Pendiente", "Completada", "Cancelada"];
 
 const Icon = ({ d, size = 16 }) => (
@@ -20,7 +20,11 @@ const emptyTask = {
 
 const TIPOS_GESTION = ["Llamada", "Email", "Reunión", "WhatsApp", "Otro"];
 
-export default function Tasks({ clients, currentUser }) {
+export default function Tasks({ clients, currentUser, theme }) {
+  const T = theme === "dark" ? DARK : LIGHT;
+  const S = getStyles(T);
+  const ESTADO_COLORS = { "Pendiente": T.gold, "Completada": "#27ae60", "Cancelada": "#E08080" };
+
   const [tasks, setTasks]       = useState([]);
   const [agents, setAgents]     = useState([]);
   const [loading, setLoading]   = useState(true);
@@ -39,6 +43,14 @@ export default function Tasks({ clients, currentUser }) {
   const [savingGestion, setSavingGestion]   = useState(false);
   const [gestionesHoy, setGestionesHoy]     = useState([]);
   const [fechaGestiones, setFechaGestiones] = useState(new Date().toISOString().split("T")[0]);
+  const [editGestion, setEditGestion] = useState(null);
+
+  // --- Buscador de gestiones (DNI / Siniestro / Palabra clave) ---
+  const [showSearch, setShowSearch]       = useState(false);
+  const [searchDni, setSearchDni]         = useState("");
+  const [searchSiniestro, setSearchSiniestro] = useState("");
+  const [searchKeyword, setSearchKeyword] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState({ dni: "", siniestro: "", keyword: "" });
 
   const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(""), 2500); };
   const set = (k, v) => setForm(d => ({ ...d, [k]: v }));
@@ -88,12 +100,30 @@ export default function Tasks({ clients, currentUser }) {
     api.getAgents().then(setAgents).catch(() => setAgents([]));
   }, []);
 
+  // Debounce de los filtros de busqueda (300ms)
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setDebouncedSearch({
+        dni: searchDni.trim().toLowerCase(),
+        siniestro: searchSiniestro.trim().toLowerCase(),
+        keyword: searchKeyword.trim().toLowerCase(),
+      });
+    }, 300);
+    return () => clearTimeout(t);
+  }, [searchDni, searchSiniestro, searchKeyword]);
+
   const today = new Date().toISOString().split("T")[0];
 
   const gestionesFiltradas = gestionesHoy.filter(g => {
-    if (filterGestion === "Todas") return true;
-    return g.estado === filterGestion;
+    if (filterGestion !== "Todas" && g.estado !== filterGestion) return false;
+    const texto = `${g.cliente} ${g.gestion}`.toLowerCase();
+    if (debouncedSearch.dni && !texto.includes(debouncedSearch.dni)) return false;
+    if (debouncedSearch.siniestro && !texto.includes(debouncedSearch.siniestro)) return false;
+    if (debouncedSearch.keyword && !texto.includes(debouncedSearch.keyword)) return false;
+    return true;
   });
+
+  const searchActivo = !!(debouncedSearch.dni || debouncedSearch.siniestro || debouncedSearch.keyword);
 
   const vencidas    = tasks.filter(t => t.estado === "Pendiente" && t.due_date && t.due_date < today).length;
   const pendientes  = tasks.filter(t => t.estado === "Pendiente").length;
@@ -187,6 +217,31 @@ export default function Tasks({ clients, currentUser }) {
     });
   };
 
+  const handleEditGestion = (g) => {
+    setEditGestion({
+      ...g,
+      cliente: g.cliente || "",
+      note: g.note || "",
+      tipo: g.tipo === "libre" ? (g.tipoGestion || "Llamada") : (g.tipo || ""),
+      _esLibre: g.tipo === "libre",
+    });
+  };
+  const handleSaveGestion = async () => {
+    const g = editGestion;
+    if (!g) return;
+    try {
+      if (g._esLibre) {
+        await api.updateGestionLibre(g.id, {
+          cliente: g.cliente, note: g.note, tipo: g.tipo,
+        });
+      } else {
+        await api.updateActivity(g.client_id, g.id, { note: g.note });
+      }
+      setEditGestion(null);
+      await loadGestionesHoy(fechaGestiones);
+      showToast("Gestión actualizada");
+    } catch (e) { showToast("Error al guardar"); }
+  };
   const handleEstadoGestion = async (g, nuevoEstado) => {
     try {
       if (g.tipo === "libre") {
@@ -202,6 +257,34 @@ export default function Tasks({ clients, currentUser }) {
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
       {toast && <div style={S.toast}>{toast}</div>}
 
+      {editGestion && (
+        <div style={S.overlay} onClick={e => e.target === e.currentTarget && setEditGestion(null)}>
+          <div style={S.modal}>
+            <div style={{ ...S.formLabel, fontSize: 13, marginBottom: 14 }}>Editar gestión</div>
+            {editGestion._esLibre && (
+              <>
+                <label style={S.formLabel}>Cliente / Nombre</label>
+                <input style={S.input} value={editGestion.cliente}
+                  onChange={e => setEditGestion({ ...editGestion, cliente: e.target.value })} />
+                <label style={{ ...S.formLabel, marginTop: 10, display: "block" }}>Tipo</label>
+                <select style={S.input} value={editGestion.tipo}
+                  onChange={e => setEditGestion({ ...editGestion, tipo: e.target.value })}>
+                  {["Llamada", "Email", "Reunión", "WhatsApp", "Otro"].map(t =>
+                    <option key={t} value={t}>{t}</option>)}
+                </select>
+              </>
+            )}
+            <label style={{ ...S.formLabel, marginTop: 10, display: "block" }}>Nota</label>
+            <textarea style={{ ...S.input, minHeight: 90, resize: "vertical" }}
+              value={editGestion.note}
+              onChange={e => setEditGestion({ ...editGestion, note: e.target.value })} />
+            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 16 }}>
+              <button style={S.btnOutline} onClick={() => setEditGestion(null)}>Cancelar</button>
+              <button style={{ ...S.btn, justifyContent: "center" }} onClick={handleSaveGestion}>Guardar</button>
+            </div>
+          </div>
+        </div>
+      )}
       {confirmModal && (
         <ConfirmModal
           title={confirmModal.title}
@@ -210,6 +293,7 @@ export default function Tasks({ clients, currentUser }) {
           confirmLabel="Sí, eliminar"
           onConfirm={confirmModal.onConfirm}
           onCancel={() => setConfirmModal(null)}
+          theme={theme}
         />
       )}
 
@@ -225,20 +309,20 @@ export default function Tasks({ clients, currentUser }) {
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))", gap: 10 }}>
         {[
-          { label: "Pendientes",  value: pendientes,  color: "var(--gold)" },
+          { label: "Pendientes",  value: pendientes,  color: T.gold },
           { label: "Vencidas",    value: vencidas,    color: "#E08080" },
           { label: "Completadas", value: completadas, color: "#27ae60" },
         ].map(k => (
-          <div key={k.label} style={{ background: "var(--card)", border: "0.5px solid var(--border)", borderRadius: 8, padding: "14px 16px" }}>
-            <div style={{ fontSize: 11, letterSpacing: "0.12em", color: "var(--mute)", textTransform: "uppercase", fontFamily: "Plus Jakarta Sans, sans-serif", marginBottom: 6 }}>{k.label}</div>
+          <div key={k.label} style={{ background: T.card, border: `0.5px solid ${T.border}`, borderRadius: 8, padding: "14px 16px" }}>
+            <div style={{ fontSize: 11, letterSpacing: "0.12em", color: T.mute, textTransform: "uppercase", fontFamily: "Plus Jakarta Sans, sans-serif", marginBottom: 6 }}>{k.label}</div>
             <div style={{ fontSize: 26, fontWeight: 700, color: k.color, fontFamily: "Plus Jakarta Sans, sans-serif" }}>{k.value}</div>
           </div>
         ))}
       </div>
 
       {/* Registro rápido de gestiones */}
-      <div style={{ background: "var(--card)", border: "0.5px solid var(--border)", borderRadius: 8, padding: "18px 20px" }}>
-        <div style={{ fontSize: 10, letterSpacing: "0.2em", color: "var(--gold)", textTransform: "uppercase", fontFamily: "Plus Jakarta Sans, sans-serif", marginBottom: 14 }}>
+      <div style={{ background: T.card, border: `0.5px solid ${T.border}`, borderRadius: 8, padding: "18px 20px" }}>
+        <div style={{ fontSize: 10, letterSpacing: "0.2em", color: T.gold, textTransform: "uppercase", fontFamily: "Plus Jakarta Sans, sans-serif", marginBottom: 14 }}>
           Registrar gestión
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }}>
@@ -270,7 +354,7 @@ export default function Tasks({ clients, currentUser }) {
             style={{ ...S.input, resize: "vertical" }} />
         </div>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
-          <span style={{ fontSize: 12, color: "var(--mute)", fontFamily: "Plus Jakarta Sans, sans-serif" }}>
+          <span style={{ fontSize: 12, color: T.mute, fontFamily: "Plus Jakarta Sans, sans-serif" }}>
             👤 {currentUser?.name || "—"}
           </span>
           <button onClick={handleGestion} disabled={savingGestion} style={{ ...S.btn, opacity: savingGestion ? 0.7 : 1 }}>
@@ -279,18 +363,18 @@ export default function Tasks({ clients, currentUser }) {
         </div>
 
         {/* Selector de fecha + filtros + lista gestiones */}
-        <div style={{ marginTop: 16, borderTop: "0.5px solid var(--border)", paddingTop: 14 }}>
+        <div style={{ marginTop: 16, borderTop: `0.5px solid ${T.border}`, paddingTop: 14 }}>
 
           {/* Header: label + fecha + botón Hoy */}
           <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginBottom: 10 }}>
-            <span style={{ fontSize: 10, letterSpacing: "0.15em", color: "var(--mute)", textTransform: "uppercase", fontFamily: "Plus Jakarta Sans, sans-serif" }}>
+            <span style={{ fontSize: 10, letterSpacing: "0.15em", color: T.mute, textTransform: "uppercase", fontFamily: "Plus Jakarta Sans, sans-serif" }}>
               Gestiones del día
             </span>
             <input
               type="date"
               value={fechaGestiones}
               onChange={e => { setFechaGestiones(e.target.value); loadGestionesHoy(e.target.value); }}
-              style={{ background: "var(--lift)", border: "0.5px solid var(--border)", color: "var(--text)",
+              style={{ background: T.lift, border: `0.5px solid ${T.border}`, color: T.text,
                 padding: "5px 10px", borderRadius: 6, fontFamily: "Plus Jakarta Sans, sans-serif",
                 fontSize: 12, outline: "none", width: "160px", flexShrink: 0 }}
             />
@@ -300,7 +384,49 @@ export default function Tasks({ clients, currentUser }) {
                 Hoy
               </button>
             )}
+            <button onClick={() => setShowSearch(s => !s)} title="Buscar gestiones"
+              style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer",
+                background: showSearch ? T.lift : "none",
+                border: `0.5px solid ${showSearch || searchActivo ? T.gold : T.border}`,
+                color: showSearch || searchActivo ? T.gold : T.mute,
+                borderRadius: 999, padding: "5px 12px", flexShrink: 0 }}>
+              <Icon d="M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16zM21 21l-4.35-4.35" size={13} />
+              <span style={{ fontSize: 10, fontFamily: "Plus Jakarta Sans, sans-serif",
+                letterSpacing: "0.08em", textTransform: "uppercase", fontWeight: 600 }}>
+                Buscar
+              </span>
+            </button>
           </div>
+
+          {/* Panel de busqueda desplegable */}
+          {showSearch && (
+            <div style={{ background: T.lift, border: `0.5px solid ${T.border}`, borderRadius: 6,
+              padding: "12px 14px", marginBottom: 12 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 10 }}>
+                <div>
+                  <label style={S.formLabel}>DNI</label>
+                  <input value={searchDni} onChange={e => setSearchDni(e.target.value)}
+                    placeholder="12345678A" style={S.input} />
+                </div>
+                <div>
+                  <label style={S.formLabel}>Siniestro</label>
+                  <input value={searchSiniestro} onChange={e => setSearchSiniestro(e.target.value)}
+                    placeholder="N.o de siniestro" style={S.input} />
+                </div>
+                <div>
+                  <label style={S.formLabel}>Palabra clave</label>
+                  <input value={searchKeyword} onChange={e => setSearchKeyword(e.target.value)}
+                    placeholder="Cliente o nota..." style={S.input} />
+                </div>
+              </div>
+              {searchActivo && (
+                <button onClick={() => { setSearchDni(""); setSearchSiniestro(""); setSearchKeyword(""); }}
+                  style={{ ...S.chipSm, marginTop: 10 }}>
+                  Limpiar filtros
+                </button>
+              )}
+            </div>
+          )}
 
           {/* Filtros de gestiones */}
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 14 }}>
@@ -316,23 +442,23 @@ export default function Tasks({ clients, currentUser }) {
           </div>
 
           {gestionesFiltradas.length === 0 && (
-            <div style={{ fontSize: 12, color: "var(--mute)", fontFamily: "Plus Jakarta Sans, sans-serif", padding: "8px 0" }}>
+            <div style={{ fontSize: 12, color: T.mute, fontFamily: "Plus Jakarta Sans, sans-serif", padding: "8px 0" }}>
               Sin gestiones para este filtro
             </div>
           )}
 
           {gestionesFiltradas.length > 0 && (
             <>
-              <div style={{ fontSize: 10, letterSpacing: "0.15em", color: "var(--mute)", textTransform: "uppercase", fontFamily: "Plus Jakarta Sans, sans-serif", marginBottom: 10 }}>
+              <div style={{ fontSize: 10, letterSpacing: "0.15em", color: T.mute, textTransform: "uppercase", fontFamily: "Plus Jakarta Sans, sans-serif", marginBottom: 10 }}>
                 {gestionesFiltradas.length} gestión{gestionesFiltradas.length !== 1 ? "es" : ""}
               </div>
               {gestionesFiltradas.map((g, i) => (
                 <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center",
-                  padding: "8px 0", borderBottom: i < gestionesFiltradas.length - 1 ? "0.5px solid var(--border)" : "none", gap: 12 }}>
+                  padding: "8px 0", borderBottom: i < gestionesFiltradas.length - 1 ? `0.5px solid ${T.border}` : "none", gap: 12 }}>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <span style={{ fontSize: 13, fontWeight: 600, color: "var(--gold)", fontFamily: "Plus Jakarta Sans, sans-serif" }}>{g.cliente}</span>
-                    <span style={{ fontSize: 13, color: "var(--text)", fontFamily: "Plus Jakarta Sans, sans-serif" }}> · {g.gestion}</span>
-                    <div style={{ fontSize: 11, color: "var(--mute)", fontFamily: "Plus Jakarta Sans, sans-serif", marginTop: 2 }}>
+                    <span style={{ fontSize: 13, fontWeight: 600, color: T.gold, fontFamily: "Plus Jakarta Sans, sans-serif" }}>{g.cliente}</span>
+                    <span style={{ fontSize: 13, color: T.text, fontFamily: "Plus Jakarta Sans, sans-serif" }}> · {g.gestion}</span>
+                    <div style={{ fontSize: 11, color: T.mute, fontFamily: "Plus Jakarta Sans, sans-serif", marginTop: 2 }}>
                       {g.usuario} · {g.hora}
                     </div>
                   </div>
@@ -341,14 +467,18 @@ export default function Tasks({ clients, currentUser }) {
                       value={g.estado}
                       onChange={e => handleEstadoGestion(g, e.target.value)}
                       style={{
-                        background: "var(--lift)", border: "0.5px solid var(--border)",
-                        color: ESTADO_COLORS[g.estado] || "var(--mute)",
+                        background: T.lift, border: `0.5px solid ${T.border}`,
+                        color: ESTADO_COLORS[g.estado] || T.mute,
                         padding: "3px 8px", borderRadius: 4, fontSize: 10,
                         fontFamily: "Plus Jakarta Sans, sans-serif", outline: "none",
                         fontWeight: 700, letterSpacing: "0.05em", cursor: "pointer",
                       }}>
                       {ESTADOS_GESTION.map(e => <option key={e} value={e}>{e}</option>)}
                     </select>
+                    <button onClick={() => handleEditGestion(g)}
+                      style={{ ...S.iconBtn, color: T.gold }} title="Editar gestión">
+                      <Icon d="M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" size={13} />
+                    </button>
                     <button onClick={() => handleDeleteGestion(g)}
                       style={{ ...S.iconBtn, color: "#8B3A3A" }} title="Eliminar gestión">
                       <Icon d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" size={13} />
@@ -361,53 +491,53 @@ export default function Tasks({ clients, currentUser }) {
         </div>
 
         {/* Sección Tareas dentro de la card */}
-        <div style={{ marginTop: 16, borderTop: "0.5px solid var(--border)", paddingTop: 14 }}>
-          <div style={{ fontSize: 10, letterSpacing: "0.15em", color: "var(--mute)", textTransform: "uppercase", fontFamily: "Plus Jakarta Sans, sans-serif", marginBottom: 12 }}>
+        <div style={{ marginTop: 16, borderTop: `0.5px solid ${T.border}`, paddingTop: 14 }}>
+          <div style={{ fontSize: 10, letterSpacing: "0.15em", color: T.mute, textTransform: "uppercase", fontFamily: "Plus Jakarta Sans, sans-serif", marginBottom: 12 }}>
             Tareas
           </div>
-          {loading && <div style={{ fontSize: 12, color: "var(--mute)", fontFamily: "Plus Jakarta Sans, sans-serif" }}>Cargando...</div>}
-          {!loading && tasks.length === 0 && <div style={{ fontSize: 12, color: "var(--mute)", fontFamily: "Plus Jakarta Sans, sans-serif" }}>Sin tareas</div>}
+          {loading && <div style={{ fontSize: 12, color: T.mute, fontFamily: "Plus Jakarta Sans, sans-serif" }}>Cargando...</div>}
+          {!loading && tasks.length === 0 && <div style={{ fontSize: 12, color: T.mute, fontFamily: "Plus Jakarta Sans, sans-serif" }}>Sin tareas</div>}
           {!loading && tasks.map(task => {
         const isVencida    = task.estado === "Pendiente" && task.due_date && task.due_date < today;
         const isCompletada = task.estado === "Completada";
         return (
-          <div key={task.id} style={{ background: "var(--card)",
-            border: `0.5px solid ${isVencida ? "#8B3A3A" : "var(--border)"}`,
+          <div key={task.id} style={{ background: T.card,
+            border: `0.5px solid ${isVencida ? "#8B3A3A" : T.border}`,
             borderRadius: 8, padding: "14px 16px", opacity: isCompletada ? 0.6 : 1 }}>
             <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
               <button onClick={() => handleComplete(task)}
                 style={{ width: 20, height: 20, borderRadius: 4, flexShrink: 0, marginTop: 2,
-                  border: `1.5px solid ${isCompletada ? "#27ae60" : "var(--goldDim)"}`,
+                  border: `1.5px solid ${isCompletada ? "#27ae60" : T.goldDim}`,
                   background: isCompletada ? "#27ae60" : "none", cursor: "pointer",
                   display: "flex", alignItems: "center", justifyContent: "center" }}>
                 {isCompletada && <span style={{ color: "#fff", fontSize: 12 }}>✓</span>}
               </button>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                  <span style={{ fontSize: 15, color: "var(--text)", fontFamily: "Plus Jakarta Sans, sans-serif",
+                  <span style={{ fontSize: 15, color: T.text, fontFamily: "Plus Jakarta Sans, sans-serif",
                     fontWeight: 600, textDecoration: isCompletada ? "line-through" : "none" }}>
                     {task.title}
                   </span>
                   <span style={{ fontSize: 10, padding: "2px 8px", borderRadius: 999,
-                    background: "var(--lift)", color: PRIORITY_COLORS[task.priority] || "var(--mute)",
+                    background: T.lift, color: PRIORITY_COLORS[task.priority] || T.mute,
                     fontFamily: "Plus Jakarta Sans, sans-serif", letterSpacing: "0.08em" }}>
                     {task.priority}
                   </span>
                   {isVencida && <span style={{ fontSize: 10, color: "#E08080", fontFamily: "Plus Jakarta Sans, sans-serif" }}>⚠ Vencida</span>}
                 </div>
                 {task.description && (
-                  <div style={{ fontSize: 13, color: "var(--mute)", fontFamily: "Plus Jakarta Sans, sans-serif", marginTop: 4 }}>
+                  <div style={{ fontSize: 13, color: T.mute, fontFamily: "Plus Jakarta Sans, sans-serif", marginTop: 4 }}>
                     {task.description}
                   </div>
                 )}
                 <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginTop: 6 }}>
-                  {task.client_name && <span style={{ fontSize: 12, color: "var(--gold)", fontFamily: "Plus Jakarta Sans, sans-serif" }}>👤 {task.client_name}</span>}
+                  {task.client_name && <span style={{ fontSize: 12, color: T.gold, fontFamily: "Plus Jakarta Sans, sans-serif" }}>👤 {task.client_name}</span>}
                   {task.due_date && (
-                    <span style={{ fontSize: 12, color: isVencida ? "#E08080" : "var(--mute)", fontFamily: "Plus Jakarta Sans, sans-serif" }}>
+                    <span style={{ fontSize: 12, color: isVencida ? "#E08080" : T.mute, fontFamily: "Plus Jakarta Sans, sans-serif" }}>
                       📅 {new Date(task.due_date + "T12:00:00").toLocaleDateString("es-ES", { day: "2-digit", month: "short", year: "numeric" })}
                     </span>
                   )}
-                  {task.assigned_to && <span style={{ fontSize: 12, color: "var(--mute)", fontFamily: "Plus Jakarta Sans, sans-serif" }}>→ {task.assigned_to}</span>}
+                  {task.assigned_to && <span style={{ fontSize: 12, color: T.mute, fontFamily: "Plus Jakarta Sans, sans-serif" }}>→ {task.assigned_to}</span>}
                 </div>
               </div>
               <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
@@ -429,12 +559,12 @@ export default function Tasks({ clients, currentUser }) {
         <div style={S.overlay} onClick={e => e.target === e.currentTarget && setShowForm(false)}>
           <div style={S.modal}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center",
-              marginBottom: 20, paddingBottom: 16, borderBottom: "0.5px solid var(--border)" }}>
-              <span style={{ fontSize: 18, fontWeight: 700, color: "var(--text)", fontFamily: "Plus Jakarta Sans, sans-serif" }}>
+              marginBottom: 20, paddingBottom: 16, borderBottom: `0.5px solid ${T.border}` }}>
+              <span style={{ fontSize: 18, fontWeight: 700, color: T.text, fontFamily: "Plus Jakarta Sans, sans-serif" }}>
                 {editId ? "Editar tarea" : "Nueva tarea"}
               </span>
               <button onClick={() => setShowForm(false)}
-                style={{ background: "none", border: "none", color: "var(--mute)", cursor: "pointer", fontSize: 18 }}>✕</button>
+                style={{ background: "none", border: "none", color: T.mute, cursor: "pointer", fontSize: 18 }}>✕</button>
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
               <div>
@@ -494,20 +624,22 @@ export default function Tasks({ clients, currentUser }) {
   );
 }
 
-const S = {
-  btn:        { display: "flex", alignItems: "center", gap: 6, padding: "9px 18px", background: "var(--gold)", color: "var(--bgApp)", border: "none", borderRadius: 6, cursor: "pointer", fontSize: 11, fontWeight: 700, fontFamily: "Plus Jakarta Sans, sans-serif", letterSpacing: "0.1em", textTransform: "uppercase" },
-  btnOutline: { padding: "9px 18px", background: "none", color: "var(--gold)", border: "1px solid var(--goldDim)", borderRadius: 6, cursor: "pointer", fontSize: 11, fontFamily: "Plus Jakarta Sans, sans-serif", letterSpacing: "0.1em", textTransform: "uppercase" },
-  iconBtn:    { background: "none", border: "none", color: "var(--mute)", cursor: "pointer", padding: 6, borderRadius: 4, display: "flex", alignItems: "center" },
-  chip:       { padding: "6px 16px", borderRadius: 999, border: "0.5px solid var(--border)", background: "none", color: "var(--textSub)", cursor: "pointer", fontFamily: "Plus Jakarta Sans, sans-serif", fontSize: 10, fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase" },
-  chipActive: { border: "0.5px solid var(--gold)", color: "var(--bgApp)", background: "var(--gold)", fontWeight: 700 },
-  chipSm:     { padding: "4px 12px", borderRadius: 999, border: "0.5px solid var(--border)", background: "none", color: "var(--textSub)", cursor: "pointer", fontFamily: "Plus Jakarta Sans, sans-serif", fontSize: 9, fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase" },
-  chipSmActive: { border: "0.5px solid var(--gold)", color: "var(--bgApp)", background: "var(--gold)", fontWeight: 700 },
-  input:      { width: "100%", background: "var(--lift)", border: "0.5px solid var(--border)", color: "var(--text)", padding: "10px 14px", borderRadius: 6, fontFamily: "Plus Jakarta Sans, sans-serif", fontSize: 13, outline: "none", boxSizing: "border-box" },
-  formLabel:  { display: "block", fontSize: 9, letterSpacing: "0.2em", color: "var(--mute)", textTransform: "uppercase", marginBottom: 6, fontFamily: "Plus Jakarta Sans, sans-serif" },
-  overlay:    { position: "fixed", inset: 0, background: "rgba(0,0,0,0.8)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100 },
-  modal:      { background: "var(--card)", border: "0.5px solid var(--border)", borderRadius: 8, padding: 28, width: "min(520px, 95vw)", maxHeight: "90vh", overflow: "auto" },
-  empty:      { textAlign: "center", color: "var(--mute)", fontSize: 13, fontFamily: "Plus Jakarta Sans, sans-serif", padding: "2rem" },
-  toast:      { position: "fixed", bottom: 28, left: "50%", transform: "translateX(-50%)", background: "var(--card)", border: "1px solid var(--goldDim)", color: "var(--gold)", padding: "11px 22px", borderRadius: 6, fontSize: 12, fontFamily: "Plus Jakarta Sans, sans-serif", letterSpacing: 1.5, textTransform: "uppercase", zIndex: 200 },
-  eyebrow:    { fontSize: 13, letterSpacing: "0.2em", color: "var(--gold)", textTransform: "uppercase", marginBottom: 8, fontFamily: "Plus Jakarta Sans, sans-serif" },
-  title:      { fontSize: 40, fontWeight: 700, color: "var(--text)", margin: 0, letterSpacing: "-0.5px", fontFamily: "Plus Jakarta Sans, sans-serif" },
-};
+function getStyles(T) {
+  return {
+    btn:        { display: "flex", alignItems: "center", gap: 6, padding: "9px 18px", background: T.gold, color: T.bgApp, border: "none", borderRadius: 6, cursor: "pointer", fontSize: 11, fontWeight: 700, fontFamily: "Plus Jakarta Sans, sans-serif", letterSpacing: "0.1em", textTransform: "uppercase" },
+    btnOutline: { padding: "9px 18px", background: "none", color: T.gold, border: `1px solid ${T.goldDim}`, borderRadius: 6, cursor: "pointer", fontSize: 11, fontFamily: "Plus Jakarta Sans, sans-serif", letterSpacing: "0.1em", textTransform: "uppercase" },
+    iconBtn:    { background: "none", border: "none", color: T.mute, cursor: "pointer", padding: 6, borderRadius: 4, display: "flex", alignItems: "center" },
+    chip:       { padding: "6px 16px", borderRadius: 999, border: `0.5px solid ${T.border}`, background: "none", color: T.textSub, cursor: "pointer", fontFamily: "Plus Jakarta Sans, sans-serif", fontSize: 10, fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase" },
+    chipActive: { border: `0.5px solid ${T.gold}`, color: T.bgApp, background: T.gold, fontWeight: 700 },
+    chipSm:     { padding: "4px 12px", borderRadius: 999, border: `0.5px solid ${T.border}`, background: "none", color: T.textSub, cursor: "pointer", fontFamily: "Plus Jakarta Sans, sans-serif", fontSize: 9, fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase" },
+    chipSmActive: { border: `0.5px solid ${T.gold}`, color: T.bgApp, background: T.gold, fontWeight: 700 },
+    input:      { width: "100%", background: T.lift, border: `0.5px solid ${T.border}`, color: T.text, padding: "10px 14px", borderRadius: 6, fontFamily: "Plus Jakarta Sans, sans-serif", fontSize: 13, outline: "none", boxSizing: "border-box" },
+    formLabel:  { display: "block", fontSize: 9, letterSpacing: "0.2em", color: T.mute, textTransform: "uppercase", marginBottom: 6, fontFamily: "Plus Jakarta Sans, sans-serif" },
+    overlay:    { position: "fixed", inset: 0, background: "rgba(0,0,0,0.8)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100 },
+    modal:      { background: T.card, border: `0.5px solid ${T.border}`, borderRadius: 8, padding: 28, width: "min(520px, 95vw)", maxHeight: "90vh", overflow: "auto" },
+    empty:      { textAlign: "center", color: T.mute, fontSize: 13, fontFamily: "Plus Jakarta Sans, sans-serif", padding: "2rem" },
+    toast:      { position: "fixed", bottom: 28, left: "50%", transform: "translateX(-50%)", background: T.card, border: `1px solid ${T.goldDim}`, color: T.gold, padding: "11px 22px", borderRadius: 6, fontSize: 12, fontFamily: "Plus Jakarta Sans, sans-serif", letterSpacing: 1.5, textTransform: "uppercase", zIndex: 200 },
+    eyebrow:    { fontSize: 13, letterSpacing: "0.2em", color: T.gold, textTransform: "uppercase", marginBottom: 8, fontFamily: "Plus Jakarta Sans, sans-serif" },
+    title:      { fontSize: 40, fontWeight: 700, color: T.text, margin: 0, letterSpacing: "-0.5px", fontFamily: "Plus Jakarta Sans, sans-serif" },
+  };
+}

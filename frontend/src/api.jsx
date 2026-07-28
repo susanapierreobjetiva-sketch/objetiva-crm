@@ -225,11 +225,13 @@ addGestionLibre: (cliente, note, tipo) =>
   deleteGestionLibre: (id) =>
     request("DELETE", `/clients/gestiones-libres/${id}`),
 
-  updateGestionLibre: (id, estado) =>
-    request("PATCH", `/clients/gestiones-libres/${id}`, { estado }),
+  updateGestionLibre: (id, data) =>
+    request("PATCH", `/clients/gestiones-libres/${id}`,
+      typeof data === "string" ? { estado: data } : data),
 
-  updateActivity: (clientId, actId, estado) =>
-    request("PATCH", `/clients/${clientId}/activity/${actId}`, { estado }),
+  updateActivity: (clientId, actId, data) =>
+    request("PATCH", `/clients/${clientId}/activity/${actId}`,
+      typeof data === "string" ? { estado: data } : data),
 
   getGestionesLibres: (fecha) =>
     request("GET", `/clients/gestiones-libres?fecha=${fecha}`),

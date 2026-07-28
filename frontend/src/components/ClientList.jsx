@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { api } from "../api";
 import ExportButton from "./ExportButton";
 import ConfirmModal from "./ConfirmModal";
+import { DARK, LIGHT } from "../theme";
 
 const Icon = ({ d, size = 16 }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
@@ -16,7 +17,9 @@ const emptyClient = {
   notas: "", assigned_to: "", assigned_to_id: "",
 };
 
-export default function ClientList({ clients, policies, onRefresh, currentUser, onSelect }) {
+export default function ClientList({ clients, policies, onRefresh, currentUser, onSelect, theme }) {
+  const T = theme === "dark" ? DARK : LIGHT;
+  const S = getStyles(T);
   const [search, setSearch]         = useState("");
   const [showForm, setShowForm]     = useState(false);
   const [formData, setFormData]     = useState(emptyClient);
@@ -125,11 +128,12 @@ export default function ClientList({ clients, policies, onRefresh, currentUser, 
           confirmLabel="Sí, eliminar todo"
           onConfirm={handleDelete}
           onCancel={() => setConfirmDelete(null)}
+          theme={theme}
         />
       )}
 
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end",
-        paddingBottom: 20, borderBottom: "0.5px solid var(--border)", flexWrap: "wrap", gap: 12 }}>
+        paddingBottom: 20, borderBottom: `0.5px solid ${T.border}`, flexWrap: "wrap", gap: 12 }}>
         <div>
           <div style={S.eyebrow}>Cartera</div>
           <h1 style={S.title}>Clientes</h1>
@@ -182,7 +186,7 @@ export default function ClientList({ clients, policies, onRefresh, currentUser, 
         </div>
 
         {showFilters && (
-          <div style={{ background: "var(--card)", border: "0.5px solid var(--border)",
+          <div style={{ background: T.card, border: `0.5px solid ${T.border}`,
             borderRadius: 8, padding: "16px 20px", display: "flex", flexWrap: "wrap", gap: 16 }}>
             {currentUser.role === "admin" && (
               <div style={{ minWidth: 180, flex: 1 }}>
@@ -211,65 +215,65 @@ export default function ClientList({ clients, policies, onRefresh, currentUser, 
           { label: "Total pólizas",  value: policies.length },
           { label: "Prima cartera",  value: `${policies.filter(p => p.estado_poliza === "Activa").reduce((s, p) => s + (p.prima_anual || 0), 0).toLocaleString("es-ES")} €` },
         ].map(k => (
-          <div key={k.label} style={{ background: "var(--card)", border: "0.5px solid var(--border)", borderRadius: 8, padding: "14px 16px" }}>
-            <div style={{ fontSize: 9, letterSpacing: "0.15em", color: "var(--mute)", textTransform: "uppercase", fontFamily: "Plus Jakarta Sans, sans-serif", marginBottom: 6 }}>{k.label}</div>
-            <div style={{ fontSize: 28, fontWeight: 700, color: "var(--gold)", fontFamily: "Plus Jakarta Sans, sans-serif" }}>{k.value}</div>
+          <div key={k.label} style={{ background: T.card, border: `0.5px solid ${T.border}`, borderRadius: 8, padding: "14px 16px" }}>
+            <div style={{ fontSize: 9, letterSpacing: "0.15em", color: T.mute, textTransform: "uppercase", fontFamily: "Plus Jakarta Sans, sans-serif", marginBottom: 6 }}>{k.label}</div>
+            <div style={{ fontSize: 28, fontWeight: 700, color: T.gold, fontFamily: "Plus Jakarta Sans, sans-serif" }}>{k.value}</div>
           </div>
         ))}
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
         {filtered.length === 0 && (
-          <div style={{ textAlign: "center", padding: "3rem", color: "var(--mute)", fontSize: 13, fontFamily: "Plus Jakarta Sans, sans-serif" }}>Sin clientes</div>
+          <div style={{ textAlign: "center", padding: "3rem", color: T.mute, fontSize: 13, fontFamily: "Plus Jakarta Sans, sans-serif" }}>Sin clientes</div>
         )}
         {filtered.map(c => {
           const nPolizas = clientPolicyCount(c.id);
           const prima    = clientPrima(c.id);
           return (
             <div key={c.id} onClick={() => onSelect(c.id)}
-              style={{ background: "var(--card)", border: "0.5px solid var(--border)",
+              style={{ background: T.card, border: `0.5px solid ${T.border}`,
                 borderRadius: 8, padding: "14px 16px", cursor: "pointer",
                 display: "flex", flexDirection: "column", gap: 10, transition: "border-color 0.15s" }}
-              onMouseEnter={e => e.currentTarget.style.borderColor = "var(--goldDim)"}
-              onMouseLeave={e => e.currentTarget.style.borderColor = "var(--border)"}>
+              onMouseEnter={e => e.currentTarget.style.borderColor = T.goldDim}
+              onMouseLeave={e => e.currentTarget.style.borderColor = T.border}>
               <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                <div style={{ width: 40, height: 40, borderRadius: "50%", background: "var(--lift)",
-                  border: "1px solid var(--goldDim)", display: "flex", alignItems: "center",
-                  justifyContent: "center", fontSize: 14, fontWeight: 700, color: "var(--gold)", flexShrink: 0 }}>
+                <div style={{ width: 40, height: 40, borderRadius: "50%", background: T.lift,
+                  border: `1px solid ${T.goldDim}`, display: "flex", alignItems: "center",
+                  justifyContent: "center", fontSize: 14, fontWeight: 700, color: T.gold, flexShrink: 0 }}>
                   {c.name.charAt(0).toUpperCase()}
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontFamily: "Plus Jakarta Sans, sans-serif", fontSize: 16, fontWeight: 600,
-                    color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    color: T.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                     {c.name}
                   </div>
                   {c.empresa && (
-                    <div style={{ fontSize: 13, color: "var(--mute)", fontFamily: "Plus Jakarta Sans, sans-serif",
+                    <div style={{ fontSize: 13, color: T.mute, fontFamily: "Plus Jakarta Sans, sans-serif",
                       overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                       {c.empresa}
                     </div>
                   )}
                   {(c.email || c.phone) && (
-                    <div style={{ fontSize: 12, color: "var(--textSub)", marginTop: 2,
+                    <div style={{ fontSize: 12, color: T.textSub, marginTop: 2,
                       fontFamily: "Plus Jakarta Sans, sans-serif", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                       {[c.email, c.phone].filter(Boolean).join(" · ")}
                     </div>
                   )}
                 </div>
-                <span style={{ fontSize: 10, padding: "3px 10px", borderRadius: 999, background: "var(--lift)",
-                  color: "var(--mute)", fontFamily: "Plus Jakarta Sans, sans-serif", letterSpacing: "0.08em",
+                <span style={{ fontSize: 10, padding: "3px 10px", borderRadius: 999, background: T.lift,
+                  color: T.mute, fontFamily: "Plus Jakarta Sans, sans-serif", letterSpacing: "0.08em",
                   textTransform: "uppercase", flexShrink: 0 }}>{c.tipo}</span>
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: 12, paddingTop: 8,
-                borderTop: "0.5px solid var(--border)" }} onClick={e => e.stopPropagation()}>
+                borderTop: `0.5px solid ${T.border}` }} onClick={e => e.stopPropagation()}>
                 <div style={{ textAlign: "center", flexShrink: 0 }}>
-                  <div style={{ fontSize: 18, fontWeight: 700, color: "var(--gold)", fontFamily: "Plus Jakarta Sans, sans-serif" }}>{nPolizas}</div>
-                  <div style={{ fontSize: 10, color: "var(--mute)", fontFamily: "Plus Jakarta Sans, sans-serif", letterSpacing: "0.08em", textTransform: "uppercase" }}>pólizas</div>
+                  <div style={{ fontSize: 18, fontWeight: 700, color: T.gold, fontFamily: "Plus Jakarta Sans, sans-serif" }}>{nPolizas}</div>
+                  <div style={{ fontSize: 10, color: T.mute, fontFamily: "Plus Jakarta Sans, sans-serif", letterSpacing: "0.08em", textTransform: "uppercase" }}>pólizas</div>
                 </div>
                 {prima > 0 && (
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 15, fontWeight: 600, color: "var(--gold)", fontFamily: "Plus Jakarta Sans, sans-serif" }}>{prima.toLocaleString("es-ES")} €</div>
-                    <div style={{ fontSize: 10, color: "var(--mute)", fontFamily: "Plus Jakarta Sans, sans-serif", letterSpacing: "0.08em", textTransform: "uppercase" }}>prima/año</div>
+                    <div style={{ fontSize: 15, fontWeight: 600, color: T.gold, fontFamily: "Plus Jakarta Sans, sans-serif" }}>{prima.toLocaleString("es-ES")} €</div>
+                    <div style={{ fontSize: 10, color: T.mute, fontFamily: "Plus Jakarta Sans, sans-serif", letterSpacing: "0.08em", textTransform: "uppercase" }}>prima/año</div>
                   </div>
                 )}
                 {prima === 0 && <div style={{ flex: 1 }} />}
@@ -293,12 +297,12 @@ export default function ClientList({ clients, policies, onRefresh, currentUser, 
         <div style={S.overlay} onClick={e => e.target === e.currentTarget && setShowForm(false)}>
           <div style={S.modal}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center",
-              marginBottom: 20, paddingBottom: 16, borderBottom: "0.5px solid var(--border)" }}>
-              <span style={{ fontSize: 18, fontWeight: 700, color: "var(--text)", fontFamily: "Plus Jakarta Sans, sans-serif" }}>
+              marginBottom: 20, paddingBottom: 16, borderBottom: `0.5px solid ${T.border}` }}>
+              <span style={{ fontSize: 18, fontWeight: 700, color: T.text, fontFamily: "Plus Jakarta Sans, sans-serif" }}>
                 {editId ? "Editar cliente" : "Nuevo cliente"}
               </span>
               <button onClick={() => setShowForm(false)}
-                style={{ background: "none", border: "none", color: "var(--mute)", cursor: "pointer", fontSize: 18 }}>✕</button>
+                style={{ background: "none", border: "none", color: T.mute, cursor: "pointer", fontSize: 18 }}>✕</button>
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
@@ -365,21 +369,21 @@ export default function ClientList({ clients, policies, onRefresh, currentUser, 
   );
 }
 
-const S = {
-  filterLabel:  { fontSize: 10, letterSpacing: "0.15em", color: "var(--mute)", textTransform: "uppercase", fontFamily: "Plus Jakarta Sans, sans-serif", marginBottom: 6 },
-  filterSelect: { width: "100%", background: "var(--lift)", border: "0.5px solid var(--border)", color: "var(--text)", padding: "8px 12px", borderRadius: 6, fontFamily: "Plus Jakarta Sans, sans-serif", fontSize: 13, outline: "none", boxSizing: "border-box" },
-  eyebrow:    { fontSize: 13, letterSpacing: "0.2em", color: "var(--gold)", textTransform: "uppercase", marginBottom: 8, fontFamily: "Plus Jakarta Sans, sans-serif" },
-  title:      { fontSize: 40, fontWeight: 700, color: "var(--text)", margin: 0, letterSpacing: "-0.5px", fontFamily: "Plus Jakarta Sans, sans-serif" },
-  btn:        { display: "flex", alignItems: "center", gap: 6, padding: "9px 18px", background: "var(--gold)", color: "var(--bgApp)", border: "none", borderRadius: 6, cursor: "pointer", fontSize: 11, fontWeight: 700, fontFamily: "Plus Jakarta Sans, sans-serif", letterSpacing: "0.1em", textTransform: "uppercase" },
-  btnOutline: { padding: "9px 18px", background: "none", color: "var(--gold)", border: "1px solid var(--goldDim)", borderRadius: 6, cursor: "pointer", fontSize: 11, fontFamily: "Plus Jakarta Sans, sans-serif", letterSpacing: "0.1em", textTransform: "uppercase" },
-  iconBtn:    { background: "none", border: "none", color: "var(--mute)", cursor: "pointer", padding: 6, borderRadius: 4, display: "flex", alignItems: "center" },
-  searchWrap: { display: "flex", alignItems: "center", gap: 10, background: "var(--card)", border: "0.5px solid var(--border)", borderRadius: 8, padding: "10px 16px" },
-  searchInput:{ flex: 1, background: "none", border: "none", color: "var(--text)", fontFamily: "Plus Jakarta Sans, sans-serif", fontSize: 13, outline: "none" },
-  chip:       { padding: "5px 14px", borderRadius: 999, border: "0.5px solid var(--border)", background: "none", color: "var(--textSub)", cursor: "pointer", fontFamily: "Plus Jakarta Sans, sans-serif", fontSize: 11, fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase" },
-  chipActive: { border: "0.5px solid var(--gold)", color: "var(--bgApp)", background: "var(--gold)", fontWeight: 700 },
-  input:      { width: "100%", background: "var(--lift)", border: "0.5px solid var(--border)", color: "var(--text)", padding: "10px 14px", borderRadius: 6, fontFamily: "Plus Jakarta Sans, sans-serif", fontSize: 13, outline: "none", boxSizing: "border-box" },
-  formLabel:  { display: "block", fontSize: 11, letterSpacing: "0.2em", color: "var(--mute)", textTransform: "uppercase", marginBottom: 6, fontFamily: "Plus Jakarta Sans, sans-serif" },
+const getStyles = (T) => ({
+  filterLabel:  { fontSize: 10, letterSpacing: "0.15em", color: T.mute, textTransform: "uppercase", fontFamily: "Plus Jakarta Sans, sans-serif", marginBottom: 6 },
+  filterSelect: { width: "100%", background: T.lift, border: `0.5px solid ${T.border}`, color: T.text, padding: "8px 12px", borderRadius: 6, fontFamily: "Plus Jakarta Sans, sans-serif", fontSize: 13, outline: "none", boxSizing: "border-box" },
+  eyebrow:    { fontSize: 13, letterSpacing: "0.2em", color: T.gold, textTransform: "uppercase", marginBottom: 8, fontFamily: "Plus Jakarta Sans, sans-serif" },
+  title:      { fontSize: 40, fontWeight: 700, color: T.text, margin: 0, letterSpacing: "-0.5px", fontFamily: "Plus Jakarta Sans, sans-serif" },
+  btn:        { display: "flex", alignItems: "center", gap: 6, padding: "9px 18px", background: T.gold, color: T.bgApp, border: "none", borderRadius: 6, cursor: "pointer", fontSize: 11, fontWeight: 700, fontFamily: "Plus Jakarta Sans, sans-serif", letterSpacing: "0.1em", textTransform: "uppercase" },
+  btnOutline: { padding: "9px 18px", background: "none", color: T.gold, border: `1px solid ${T.goldDim}`, borderRadius: 6, cursor: "pointer", fontSize: 11, fontFamily: "Plus Jakarta Sans, sans-serif", letterSpacing: "0.1em", textTransform: "uppercase" },
+  iconBtn:    { background: "none", border: "none", color: T.mute, cursor: "pointer", padding: 6, borderRadius: 4, display: "flex", alignItems: "center" },
+  searchWrap: { display: "flex", alignItems: "center", gap: 10, background: T.card, border: `0.5px solid ${T.border}`, borderRadius: 8, padding: "10px 16px" },
+  searchInput:{ flex: 1, background: "none", border: "none", color: T.text, fontFamily: "Plus Jakarta Sans, sans-serif", fontSize: 13, outline: "none" },
+  chip:       { padding: "5px 14px", borderRadius: 999, border: `0.5px solid ${T.border}`, background: "none", color: T.textSub, cursor: "pointer", fontFamily: "Plus Jakarta Sans, sans-serif", fontSize: 11, fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase" },
+  chipActive: { border: `0.5px solid ${T.gold}`, color: T.bgApp, background: T.gold, fontWeight: 700 },
+  input:      { width: "100%", background: T.lift, border: `0.5px solid ${T.border}`, color: T.text, padding: "10px 14px", borderRadius: 6, fontFamily: "Plus Jakarta Sans, sans-serif", fontSize: 13, outline: "none", boxSizing: "border-box" },
+  formLabel:  { display: "block", fontSize: 11, letterSpacing: "0.2em", color: T.mute, textTransform: "uppercase", marginBottom: 6, fontFamily: "Plus Jakarta Sans, sans-serif" },
   overlay:    { position: "fixed", inset: 0, background: "rgba(0,0,0,0.8)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100 },
-  modal:      { background: "var(--card)", border: "0.5px solid var(--border)", borderRadius: 8, padding: 28, width: "min(500px, 95vw)", maxHeight: "90vh", overflow: "auto" },
-  toast:      { position: "fixed", bottom: 28, left: "50%", transform: "translateX(-50%)", background: "var(--card)", border: "1px solid var(--goldDim)", color: "var(--gold)", padding: "11px 22px", borderRadius: 6, fontSize: 12, fontFamily: "Plus Jakarta Sans, sans-serif", letterSpacing: 1.5, textTransform: "uppercase", zIndex: 200 },
-};
+  modal:      { background: T.card, border: `0.5px solid ${T.border}`, borderRadius: 8, padding: 28, width: "min(500px, 95vw)", maxHeight: "90vh", overflow: "auto" },
+  toast:      { position: "fixed", bottom: 28, left: "50%", transform: "translateX(-50%)", background: T.card, border: `1px solid ${T.goldDim}`, color: T.gold, padding: "11px 22px", borderRadius: 6, fontSize: 12, fontFamily: "Plus Jakarta Sans, sans-serif", letterSpacing: 1.5, textTransform: "uppercase", zIndex: 200 },
+});

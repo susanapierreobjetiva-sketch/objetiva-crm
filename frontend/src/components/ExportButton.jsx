@@ -3,6 +3,7 @@ import ExcelJS from "exceljs";
 import { saveAs } from "file-saver";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { DARK, LIGHT } from "../theme";
 
 async function exportExcel(data, columns, filename, title) {
   const wb = new ExcelJS.Workbook();
@@ -66,7 +67,9 @@ function exportPDF(data, columns, filename, title) {
   doc.save(`${filename}.pdf`);
 }
 
-export default function ExportButton({ data, columns, filename, title }) {
+export default function ExportButton({ data, columns, filename, title, theme }) {
+  const T = theme === "dark" ? DARK : LIGHT;
+
   const [open, setOpen]         = useState(false);
   const [loading, setLoading]   = useState(false);
 
@@ -89,8 +92,8 @@ export default function ExportButton({ data, columns, filename, title }) {
       <button onClick={() => setOpen(o => !o)} disabled={loading}
         style={{ display: "flex", alignItems: "center", gap: 6,
           padding: "9px 16px", background: "none",
-          border: "0.5px solid var(--goldDim)", borderRadius: 6,
-          color: "var(--gold)", cursor: loading ? "not-allowed" : "pointer",
+          border: `0.5px solid ${T.goldDim}`, borderRadius: 6,
+          color: T.gold, cursor: loading ? "not-allowed" : "pointer",
           fontSize: 11, fontWeight: 700, opacity: loading ? 0.7 : 1,
           fontFamily: "Plus Jakarta Sans, sans-serif",
           letterSpacing: "0.1em", textTransform: "uppercase" }}>
@@ -98,21 +101,21 @@ export default function ExportButton({ data, columns, filename, title }) {
       </button>
       {open && (
         <div style={{ position: "absolute", top: "calc(100% + 6px)", right: 0,
-          background: "var(--card)", border: "0.5px solid var(--border)",
+          background: T.card, border: `0.5px solid ${T.border}`,
           borderRadius: 8, overflow: "hidden", zIndex: 100,
           boxShadow: "0 4px 16px rgba(0,0,0,0.2)", minWidth: 160 }}>
           <button onClick={handleExcel}
             style={{ display: "flex", alignItems: "center", gap: 10,
               width: "100%", padding: "12px 16px", background: "none",
-              border: "none", borderBottom: "0.5px solid var(--border)",
-              color: "var(--text)", cursor: "pointer",
+              border: "none", borderBottom: `0.5px solid ${T.border}`,
+              color: T.text, cursor: "pointer",
               fontFamily: "Plus Jakarta Sans, sans-serif", fontSize: 13, textAlign: "left" }}>
             📊 Excel (.xlsx)
           </button>
           <button onClick={handlePDF}
             style={{ display: "flex", alignItems: "center", gap: 10,
               width: "100%", padding: "12px 16px", background: "none",
-              border: "none", color: "var(--text)", cursor: "pointer",
+              border: "none", color: T.text, cursor: "pointer",
               fontFamily: "Plus Jakarta Sans, sans-serif", fontSize: 13, textAlign: "left" }}>
             📄 PDF
           </button>

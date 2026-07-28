@@ -15,14 +15,6 @@ import Notifications from "./components/Notifications";
 import Tasks from "./components/Tasks";
 import Backup from "./components/Backup";
 
-if (!document.getElementById("crm-fonts")) {
-  const l = document.createElement("link");
-  l.id   = "crm-fonts";
-  l.rel  = "stylesheet";
-  l.href = "https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Jura:wght@300;400;500&family=Syne:wght@400;500;600;700&display=swap";
-  document.head.appendChild(l);
-}
-
 export default function App() {
   const [currentUser, setCurrentUser] = useState(null);
   const [theme, setTheme]             = useState("dark");
@@ -99,7 +91,11 @@ export default function App() {
   );
 
   if (!currentUser) return (
-    <Login onLogin={user => { setCurrentUser(user); setTheme(user.theme || "dark"); }} />
+    <Login
+      onLogin={user => { setCurrentUser(user); setTheme(user.theme || "dark"); }}
+      theme={theme}
+      onToggleTheme={() => setTheme(t => t === "dark" ? "light" : "dark")}
+    />
   );
 
   const selectedClient = clients.find(c => c.id === selectedClientId);
@@ -110,7 +106,7 @@ export default function App() {
     <div style={{
       display: "flex", height: "100vh", overflow: "hidden",
       background: T.bgApp, color: T.text,
-      fontFamily: "'Instrument Sans', sans-serif", fontSize: "16px",
+      fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: "16px",
       "--bg": T.bg, "--bgApp": T.bgApp, "--sidebar": T.sidebar,
       "--card": T.card, "--lift": T.lift, "--border": T.border,
       "--gold": T.gold, "--goldDim": T.goldDim, "--goldHi": T.goldHi,
@@ -183,22 +179,22 @@ export default function App() {
           </div>
         )}
 
-        {view === "dashboard"     && <Dashboard clients={clients} policies={policies} claims={claims} onNavigate={navigateTo} />}
+        {view === "dashboard"     && <Dashboard clients={clients} policies={policies} claims={claims} onNavigate={navigateTo} theme={theme} />}
         {view === "clients"       && !selectedClientId && (
           <ClientList clients={clients} policies={policies} onRefresh={loadAll}
-            currentUser={currentUser}
+            currentUser={currentUser} theme={theme}
             onSelect={id => { setSelectedClientId(id); setView("client_detail"); }} />
         )}
         {view === "client_detail" && selectedClient && (
           <ClientDetail client={selectedClient} policies={clientPolicies} claims={clientClaims}
             onRefresh={loadAll} currentUser={currentUser}
-            onBack={() => { setSelectedClientId(null); setView("clients"); }} />
+            onBack={() => { setSelectedClientId(null); setView("clients"); }} theme={theme} />
         )}
         {view === "pipeline"      && <Pipeline policies={policies} clients={clients} onRefresh={loadAll} currentUser={currentUser} theme={theme} />}
-        {view === "activities"    && <Activities policies={policies} clients={clients} onRefresh={loadAll} />}
-        {view === "claims"        && <Claims claims={claims} clients={clients} policies={policies} onRefresh={loadAll} currentUser={currentUser} />}
-        {view === "tasks"         && <Tasks clients={clients} currentUser={currentUser} />}
-        {view === "reports"       && <Reports clients={clients} policies={policies} claims={claims} currentUser={currentUser} />}
+        {view === "activities"    && <Activities policies={policies} clients={clients} onRefresh={loadAll} theme={theme} />}
+        {view === "claims"        && <Claims claims={claims} clients={clients} policies={policies} onRefresh={loadAll} currentUser={currentUser} theme={theme} />}
+        {view === "tasks"         && <Tasks clients={clients} currentUser={currentUser} theme={theme} />}
+        {view === "reports"       && <Reports clients={clients} policies={policies} claims={claims} currentUser={currentUser} theme={theme} />}
         {view === "profile"       && (
           <Profile currentUser={currentUser} theme={theme}
             onToggleTheme={() => setTheme(t => t === "dark" ? "light" : "dark")}
