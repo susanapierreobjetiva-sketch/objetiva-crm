@@ -13,6 +13,7 @@ router = APIRouter()
 
 SECRET_KEY          = os.getenv('SECRET_KEY')
 ALGORITHM           = os.getenv('ALGORITHM')
+SSO_SECRET          = os.getenv('SSO_SECRET')
 ACCESS_EXPIRE_MIN   = int(os.getenv('ACCESS_TOKEN_EXPIRE_MINUTES', 60))
 REFRESH_EXPIRE_DAYS = int(os.getenv('REFRESH_TOKEN_EXPIRE_DAYS', 7))
 
@@ -28,6 +29,21 @@ def create_refresh_token(user_id: str) -> str:
 def verify_password(plain, hashed):
     return bcrypt.checkpw(plain.encode(), hashed.encode())
 
+# ── SSO (token compartido entre módulos, indexado por email) ──
+def decode_sso_token(token: str):
+    """Valida un token SSO emitido por Lucy. Devuelve el email si es válido,
+    o None si no es un token SSO (para que get_current_user siga su flujo)."""
+    if not SSO_SECRET:
+        return None
+    try:
+        payload = jwt.decode(token, SSO_SECRET, algorithms=[ALGORITHM])
+        if payload.get("type") != "sso":
+            return None
+        return payload.get("email")
+    except JWTError:
+        return None
+
+
 async def get_current_user(request: Request):
     token = None
     auth_header = request.headers.get('Authorization', '')
@@ -37,19 +53,26 @@ async def get_current_user(request: Request):
         token = request.cookies.get('access_token')
     if not token:
         raise HTTPException(status_code=401, detail='No autenticado')
+    users_db = request.app.mongodb_client['objetiva_vault']
+    user = None
+
+    # Vía 1: token propio de CRM (login nativo)
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         if payload.get('type') != 'access':
             raise HTTPException(status_code=401, detail='Token inválido')
         user_id = payload.get('sub')
+        user = await users_db['users'].find_one({'_id': ObjectId(user_id)})
     except JWTError:
-        raise HTTPException(status_code=401, detail='Token expirado o inválido')
+        # Vía 2: token SSO emitido por Lucy (indexado por email)
+        email = decode_sso_token(token)
+        if email:
+            user = await users_db['users'].find_one({'email': email})
 
-    users_db = request.app.mongodb_client['objetiva_vault']
-    user = await users_db['users'].find_one({'_id': ObjectId(user_id)})
     if not user:
         raise HTTPException(status_code=401, detail='Usuario no encontrado')
 
+    # Bloqueo de cuenta: aplica a ambas vías
     if user.get('locked_until'):
         locked_until = datetime.fromisoformat(user['locked_until'])
         if locked_until > datetime.now(timezone.utc):
