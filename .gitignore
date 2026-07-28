@@ -1,0 +1,22 @@
+# Secretos — NUNCA subir
+.env
+.env.*
+
+# Entorno virtual
+venv/
+
+# Cachés Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Backups y parches temporales
+*.bak
+*.bak_*
+*.bak-*
+*.backup
+*.backup-*
+main.py.bak*
+
+# Sistema
+.DS_Store
